@@ -1302,9 +1302,14 @@ function fightProbabilities(f){
 function ensureMyBettor(){
   if(!currentUser) return;
   const name=currentUser.username.trim();
-  if(!bettors.some(b=>b.name.toLowerCase()===name.toLowerCase())){
-    bettors.push({id:nextBettorId++, name, balance:START_BALANCE, loan:null, loanCooldownUntil:0});
-    save();
+  if(bettors.some(b=>b.name.toLowerCase()===name.toLowerCase())) return;
+  bettors.push({id:nextBettorId++, name, balance:START_BALANCE, loan:null, loanCooldownUntil:0});
+  // Escribir solo bettors con merge para no machacar el resto del documento en la nube
+  if(USE_CLOUD && db && cloudReady){
+    gameDoc().set({bettors:bettors, nextBettorId:nextBettorId}, {merge:true})
+      .catch(e=>console.warn('Error guardando apostador:', e));
+  } else {
+    try{ localStorage.setItem('ufcBets', JSON.stringify(gatherState())); }catch(e){}
   }
 }
 function addBettor(){
