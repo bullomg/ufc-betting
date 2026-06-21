@@ -273,6 +273,16 @@
   .bk-col:not(:first-child) .bk-champ::before{content:""; position:absolute; right:100%; top:50%; width:23px; height:2px; background:var(--border2); transform:translateY(-50%)}
   .bk-col:not(:last-child) .match:nth-child(odd):not(:only-child)::after{content:""; position:absolute; left:100%; top:50%; width:2px; height:100%; background:var(--border2)}
 
+  /* ---------- Bracket 5 jugadores (formato personalizado) ---------- */
+  .b5wrap{display:flex; align-items:stretch; min-width:max-content; padding:6px 4px 4px; gap:0}
+  .b5col{display:flex; flex-direction:column; flex:0 0 210px; min-width:210px}
+  .b5row{display:flex; align-items:center; justify-content:center; padding:7px 0}
+  .b5s{flex:1}
+  .b5bye{display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 23px}
+  .b5bylbl{font-size:.5rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:700; text-align:center}
+  .b5byname{font-family:var(--display); font-size:.88rem; color:var(--gold2); background:rgba(212,175,55,.1); border:1px solid rgba(212,175,55,.3); border-radius:8px; padding:7px 12px; width:100%; text-align:center; box-sizing:border-box}
+  .b5conn{display:flex; align-items:center; justify-content:center; padding:0 23px; color:var(--muted); font-size:.65rem; text-align:center; flex:2}
+
   /* ---------- Tablón de noticias ---------- */
   .news-board{
     margin:30px auto 0; max-width:920px;
@@ -707,7 +717,7 @@ let bmf = null;      // nombre del peleador que posee el cinturón BMF (o null =
 let fighters = [];   // peleadores registrados en el ranking (nombres)
 let news = [];       // tablón de noticias [{ts, icon, text}]
 let fotn = null;     // id del combate marcado como "Combate de la Noche"
-let tourn = null;    // torneo de eliminación directa {size, rounds, roundNames, champion, done}
+let tourn = null;    // torneo: estándar {size,rounds,roundNames,champion,done} | custom5 {format:'custom5',size,players,matches,champion,done}
 let users = [];      // cuentas [{username, password, role:'admin'|'user'}]
 let nextEvent = null; // cuenta atrás {label, ts} o null
 let currentUser = null; // sesión actual
@@ -1371,10 +1381,34 @@ function createTournament(){
   if(pool.length<2){ toast('Registra al menos 2 peleadores'); return; }
   if(tourn && !confirm('Ya hay un torneo en marcha. ¿Sortear uno nuevo? Se borrarán los combates del torneo actual (se devuelven las apuestas abiertas).')) return;
   if(tourn){ refundOpenTournFights(); fights=fights.filter(f=>!f.tourn); }
-  // tamaño = mayor potencia de 2 que quepa (máx 16)
-  let size=2; while(size*2<=pool.length && size<16) size*=2;
   // barajar (Fisher-Yates)
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  // --- formato personalizado para exactamente 5 peleadores ---
+  if(pool.length===5){
+    const [P1,P2,P3,P4,P5]=pool;
+    tourn={
+      format:'custom5', size:5, players:pool.slice(),
+      champion:null, done:false,
+      matches:[
+        {id:0, label:'Eliminatoria I',  a:P1, b:P2, winner:null, fightId:null, feedsMatch:1, feedsSlot:'a'},
+        {id:1, label:'Semifinal',       a:null, b:P3, winner:null, fightId:null, feedsMatch:3, feedsSlot:'a'},
+        {id:2, label:'Eliminatoria II', a:P4, b:P5, winner:null, fightId:null, feedsMatch:3, feedsSlot:'b'},
+        {id:3, label:'Final',           a:null, b:null, winner:null, fightId:null, feedsMatch:null}
+      ]
+    };
+    createCustomTournFight(0);
+    createCustomTournFight(2);
+    addNews('🎲','¡Sorteo del torneo! 5 jugadores · formato especial.',
+      ['🏟️ Elim. I: '+P1+' vs '+P2+' → ganador vs '+P3+' (Semifinal)',
+       '🏟️ Elim. II: '+P4+' vs '+P5+' → ganador a la Final directamente',
+       '🏆 Final: Ganador Semifinal vs Ganador Elim. II',
+       '📣 Eliminatorias I y II abiertas. ¡A apostar!']);
+    save(); render();
+    toast('Torneo sorteado: 5 jugadores (formato personalizado)');
+    return;
+  }
+  // tamaño = mayor potencia de 2 que quepa (máx 16)
+  let size=2; while(size*2<=pool.length && size<16) size*=2;
   const parts=pool.slice(0,size);
   const roundNames=TOURN_ROUND_NAMES[size];
   const rounds=[];
@@ -1407,8 +1441,48 @@ function createTournFight(ri,mi){
      '🔵 '+m.b+' — récord '+recordStr(m.b),
      '💸 Combate apostable: el ganador avanza a la siguiente ronda.']);
 }
+function createCustomTournFight(matchId){
+  if(!tourn||!tourn.matches) return;
+  const m=tourn.matches[matchId];
+  if(!m||!m.a||!m.b) return;
+  if(m.fightId && getFight(m.fightId)) return;
+  const f={id:nextFightId++, name:'Torneo · '+m.label, red:m.a, blue:m.b, card:'tourn', status:'open', winner:null, bets:[], tourn:{matchId}};
+  fights.push(f);
+  m.fightId=f.id;
+  addNews('📣',`Torneo — ${m.label}: ${m.a} vs ${m.b}.`,
+    ['🏟️ Fase: '+m.label,
+     '🔴 '+m.a+' — récord '+recordStr(m.a),
+     '🔵 '+m.b+' — récord '+recordStr(m.b),
+     '💸 Combate apostable: el ganador avanza.']);
+}
 function advanceTournament(f, winnerName){
   if(!tourn || !f.tourn) return;
+  // --- formato personalizado 5 jugadores ---
+  if(tourn.format==='custom5'){
+    const {matchId}=f.tourn;
+    const m=tourn.matches && tourn.matches[matchId];
+    if(!m) return;
+    m.winner=winnerName;
+    if(m.feedsMatch!==null){
+      const nm=tourn.matches[m.feedsMatch];
+      nm[m.feedsSlot]=winnerName;
+      createCustomTournFight(m.feedsMatch);
+      if(!nm.a||!nm.b){
+        addNews('📣','Torneo — '+nm.label+': esperando al otro clasificado.',
+          ['⏳ '+winnerName+' avanza. La otra plaza se decide en el combate pendiente.']);
+      }
+    } else {
+      tourn.champion=winnerName; tourn.done=true;
+      addNews('🏆',`¡${winnerName} se proclama CAMPEÓN del torneo!`,
+        ['🥇 Campeón: '+winnerName+' ('+recordStr(winnerName)+')',
+         '🏟️ Completó Eliminatoria I → Semifinal → Final.',
+         '📊 El cuadro determina la posición en el ranking.']);
+      collapsed['tourn']=true;
+      try{localStorage.setItem('ufcCollapsed',JSON.stringify(collapsed));}catch(e){}
+    }
+    return;
+  }
+  // --- formato estándar (potencia de 2) ---
   const {ri,mi}=f.tourn;
   const m=tourn.rounds[ri] && tourn.rounds[ri][mi];
   if(!m) return;
@@ -1423,7 +1497,6 @@ function advanceTournament(f, winnerName){
       ['🥇 Campeón del torneo: '+winnerName+' ('+recordStr(winnerName)+')',
        '🏟️ Ganó todas las rondas hasta la Final.',
        '📊 El cuadro determina la posición en el ranking.']);
-    // al terminar el torneo, plegar su sección por defecto para limpiar la vista
     collapsed['tourn']=true;
     try{ localStorage.setItem('ufcCollapsed', JSON.stringify(collapsed)); }catch(e){}
   }
@@ -1442,6 +1515,21 @@ function deleteTournament(){
 function tournKey(name){
   if(!tourn) return null;
   const k=name.trim().toLowerCase();
+  if(tourn.champion && tourn.champion.trim().toLowerCase()===k) return 100000;
+  if(tourn.format==='custom5'){
+    let best=-1, stillIn=false;
+    tourn.matches.forEach((m,i)=>{
+      const ak=m.a&&m.a.trim().toLowerCase(), bk=m.b&&m.b.trim().toLowerCase();
+      if(ak===k||bk===k){
+        if(!m.winner) stillIn=true;
+        else if(m.winner.trim().toLowerCase()===k) best=Math.max(best,i+1);
+        else best=Math.max(best,i);
+      }
+    });
+    if(stillIn) return 50000+best;
+    return best;
+  }
+  // formato estándar
   let participant=false, wins=0, elimRound=-1, active=true;
   tourn.rounds.forEach((round,ri)=>{
     round.forEach(m=>{
@@ -1456,32 +1544,73 @@ function tournKey(name){
     });
   });
   if(!participant) return -1;
-  if(tourn.champion && tourn.champion.trim().toLowerCase()===k) return 100000;
-  if(active) return 50000+wins;   // sigue vivo en el torneo
-  return elimRound;               // eliminado: ronda más tardía = mejor posición
+  if(active) return 50000+wins;
+  return elimRound;
 }
 function renderBracket(){
   const el=document.getElementById('bracketBox'); if(!el) return;
-  if(!tourn){ el.innerHTML='<p class="empty">No hay torneo. Pulsa “Sortear torneo” para generar el cuadro con los peleadores registrados.</p>'; return; }
+  if(!tourn){ el.innerHTML='<p class=”empty”>No hay torneo. Pulsa “Sortear torneo” para generar el cuadro con los peleadores registrados.</p>'; return; }
+  if(tourn.format==='custom5'){ renderBracket5(); return; }
   let cols='';
   tourn.rounds.forEach((round,ri)=>{
     let matches='';
     round.forEach(m=>{
       const wk=m.winner? m.winner.trim().toLowerCase():null;
       const slot=(nm)=>{
-        if(!nm) return `<div class="bk-slot empty"><span class="bk-nm">Por definir</span></div>`;
+        if(!nm) return `<div class=”bk-slot empty”><span class=”bk-nm”>Por definir</span></div>`;
         const win = wk && wk===nm.trim().toLowerCase();
         const out = m.winner && !win;
-        return `<div class="bk-slot${win?' win':''}${out?' out':''}"><span class="bk-nm">${escapeHtml(nm)}</span></div>`;
+        return `<div class=”bk-slot${win?' win':''}${out?' out':''}”><span class=”bk-nm”>${escapeHtml(nm)}</span></div>`;
       };
-      matches+=`<div class="match"><div class="bk-match">${slot(m.a)}${slot(m.b)}</div></div>`;
+      matches+=`<div class=”match”><div class=”bk-match”>${slot(m.a)}${slot(m.b)}</div></div>`;
     });
-    cols+=`<div class="bk-col"><div class="bk-round">${tourn.roundNames[ri]}</div><div class="round">${matches}</div></div>`;
+    cols+=`<div class=”bk-col”><div class=”bk-round”>${tourn.roundNames[ri]}</div><div class=”round”>${matches}</div></div>`;
   });
   if(tourn.champion){
-    cols+=`<div class="bk-col bk-col-champ"><div class="bk-round">Campeón</div><div class="round"><div class="match"><div class="bk-champ">🏆 <span>${escapeHtml(tourn.champion)}</span></div></div></div></div>`;
+    cols+=`<div class=”bk-col bk-col-champ”><div class=”bk-round”>Campeón</div><div class=”round”><div class=”match”><div class=”bk-champ”>🏆 <span>${escapeHtml(tourn.champion)}</span></div></div></div></div>`;
   }
-  el.innerHTML=`<div class="bracket">${cols}</div>`;
+  el.innerHTML=`<div class=”bracket”>${cols}</div>`;
+}
+function renderBracket5(){
+  const el=document.getElementById('bracketBox'); if(!el) return;
+  const ms=tourn.matches;
+  const slot=(name,winner)=>{
+    if(!name) return `<div class=”bk-slot empty”><span class=”bk-nm”>Por definir</span></div>`;
+    const w=winner&&winner.trim().toLowerCase()===name.trim().toLowerCase();
+    const out=winner&&!w;
+    return `<div class=”bk-slot${w?' win':''}${out?' out':''}”><span class=”bk-nm”>${escapeHtml(name)}</span></div>`;
+  };
+  const mbox=(m)=>`<div class=”bk-match”>${slot(m.a,m.winner)}${slot(m.b,m.winner)}</div>`;
+  const champ=tourn.champion
+    ?`<div class=”bk-champ”>🏆 <span>${escapeHtml(tourn.champion)}</span></div>`
+    :`<div class=”bk-match”><div class=”bk-slot empty”><span class=”bk-nm”>Por definir</span></div></div>`;
+  // ganador de Elim II para mostrar en la columna central
+  const w45label=ms[2].winner?escapeHtml(ms[2].winner):'Ganador Elim. II';
+  el.innerHTML=`<div class=”b5wrap”>
+    <div class=”b5col”>
+      <div class=”bk-round”>Eliminatoria I</div>
+      <div class=”b5row b5s”><div class=”match”>${mbox(ms[0])}</div></div>
+      <div class=”b5bye”>
+        <div class=”b5bylbl”>Pasa directo a Semifinal</div>
+        <div class=”b5byname”>${escapeHtml(ms[1].b||'')}</div>
+      </div>
+      <div class=”b5row b5s”><div class=”match”>${mbox(ms[2])}</div></div>
+      <div class=”bk-round”>Eliminatoria II</div>
+    </div>
+    <div class=”b5col”>
+      <div class=”bk-round”>Semifinal</div>
+      <div class=”b5row” style=”flex:3”><div class=”match”>${mbox(ms[1])}</div></div>
+      <div class=”b5conn”>${w45label}<br><span style=”opacity:.5;font-size:.6rem”>→ pasa a la Final</span></div>
+    </div>
+    <div class=”b5col”>
+      <div class=”bk-round”>Final</div>
+      <div class=”b5row b5s”><div class=”match”>${mbox(ms[3])}</div></div>
+    </div>
+    <div class=”b5col”>
+      <div class=”bk-round”>Campeón</div>
+      <div class=”b5row b5s”><div class=”match”>${champ}</div></div>
+    </div>
+  </div>`;
 }
 function toggleSection(key){
   collapsed[key]=!collapsed[key];
@@ -1579,7 +1708,11 @@ function declareWinner(fid, side){
   // crónica posterior al combate
   const nBets=f.bets.length, nWin=f.bets.filter(b=>b.side===side).length;
   const winnerProb = side==='red'? probs.pRed : probs.pBlue;
-  const roundName = (f.tourn && tourn)? tourn.roundNames[f.tourn.ri] : '';
+  const roundName = (f.tourn && tourn)
+    ? (tourn.format==='custom5'
+        ? (tourn.matches[f.tourn.matchId]||{label:''}).label
+        : (tourn.roundNames[f.tourn.ri]||''))
+    : '';
   addNews('🥊', `${winnerName} derrota a ${loserName}${f.name?' en '+f.name:''}.`,
     fightReport(winnerName, loserName, f, winnerProb, total, nBets, nWin, oddsWin, !!f.tourn, roundName));
   if(champion && champion.trim().toLowerCase()===loserKey){
