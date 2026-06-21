@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UFC · Casa de Apuestas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Firebase (modo online). Si no rellenas la config más abajo, la app sigue en modo local. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#08080a; --bg2:#101015; --panel:#15151c; --panel2:#1d1d27; --panel3:#26262f;
+    --border:#2c2c38; --border2:#3a3a48;
+    --txt:#f3f1ec; --muted:#9a9aa8; --red:#d20a11; --red2:#ff2d2d; --blue:#1f6feb; --blue2:#4d9bff;
+    --gold:#d4af37; --gold2:#f4d77a; --green:#2ec27a; --accent:#d20a11;
+    --display:'Anton',Impact,'Arial Narrow Bold',sans-serif;
+    --body:'Oswald','Segoe UI',system-ui,sans-serif;
+    --gold-grad:linear-gradient(135deg,#f7e9a8 0%,#d4af37 38%,#8a6d1e 70%,#e8cf7e 100%);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; font-family:var(--body)}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -180px,rgba(210,10,17,.20),transparent 60%),
+      radial-gradient(900px 600px at 50% 110%,rgba(212,175,55,.07),transparent 60%),
+      repeating-linear-gradient(135deg,rgba(255,255,255,.012) 0 2px,transparent 2px 9px),
+      linear-gradient(180deg,#0c0c10,#08080a 60%);
+    background-attachment:fixed;
+    color:var(--txt); min-height:100vh; padding:22px 18px 60px; font-weight:300;
+  }
+  ::selection{background:var(--red); color:#fff}
+  .wrap{width:100%; max-width:min(2080px, 95vw); margin:0 auto}
+
+  /* ---------- Adaptación a la resolución de pantalla ---------- */
+  /* En 2K/1440p NO se escala: el contenido se ensancha (max-width) y queda a tamaño normal. */
+  /* El zoom se reserva solo para 4K real, con una escala moderada para que no se vea diminuto. */
+  @media (min-width:3200px){ html{ zoom:1.35; } }
+  /* Pantallas pequeñas / portátiles: menos padding para aprovechar el ancho */
+  @media (max-width:900px){ body{ padding:14px 10px 50px; } }
+
+  /* ---------- Cabecera ---------- */
+  .topbar{
+    position:relative; text-align:center; padding:30px 18px 26px; margin-bottom:8px;
+    border:1px solid var(--border); border-radius:18px; overflow:hidden;
+    background:
+      radial-gradient(600px 200px at 50% 0,rgba(210,10,17,.28),transparent 70%),
+      linear-gradient(180deg,#16161d,#0d0d12);
+    box-shadow:0 20px 50px -25px #000, inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .topbar::before,.topbar::after{
+    content:""; position:absolute; top:0; bottom:0; width:42%;
+    background:repeating-linear-gradient(90deg,transparent 0 16px,rgba(212,175,55,.05) 16px 17px);
+    pointer-events:none;
+  }
+  .topbar::before{left:0; -webkit-mask:linear-gradient(90deg,#000,transparent); mask:linear-gradient(90deg,#000,transparent)}
+  .topbar::after{right:0; -webkit-mask:linear-gradient(270deg,#000,transparent); mask:linear-gradient(270deg,#000,transparent)}
+  .brand{
+    font-family:var(--display); font-size:clamp(2.4rem,7vw,4.2rem); line-height:.92;
+    letter-spacing:2px; text-transform:uppercase; position:relative;
+  }
+  .brand .ufc{
+    background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.5));
+  }
+  .brand .bet{color:#fff; -webkit-text-stroke:1px rgba(212,175,55,.5)}
+  .tagline{
+    font-family:var(--body); font-weight:500; text-transform:uppercase; letter-spacing:4px;
+    font-size:.72rem; color:var(--muted); margin-top:12px;
+  }
+  .tagline b{color:var(--gold2)}
+  .belt{height:3px; width:180px; margin:14px auto 0; border-radius:3px; background:var(--gold-grad); box-shadow:0 0 14px rgba(212,175,55,.5)}
+
+  .section-title{
+    font-family:var(--display); text-transform:uppercase; letter-spacing:2px;
+    font-size:1.5rem; color:#fff; display:flex; align-items:center; gap:12px;
+  }
+  .section-title::before{content:""; width:8px; height:24px; background:var(--gold-grad); border-radius:2px; box-shadow:0 0 10px rgba(212,175,55,.5)}
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:24px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+
+  /* ---------- Tarjetas ---------- */
+  .card{
+    position:relative; background:linear-gradient(180deg,#17171f,#101015);
+    border:1px solid var(--border); border-radius:16px; padding:20px;
+    box-shadow:0 18px 40px -28px #000, inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .card::before{content:""; position:absolute; left:0; top:18px; bottom:18px; width:3px; border-radius:3px; background:var(--gold-grad); opacity:.8}
+  .card h2{
+    font-family:var(--display); font-weight:400; letter-spacing:1.5px; text-transform:uppercase;
+    font-size:1.15rem; margin-bottom:16px; display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid var(--border); padding-bottom:12px; color:#fff;
+  }
+  label{display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:12px 0 5px; font-weight:500}
+  input,select{
+    width:100%; background:#0c0c11; border:1px solid var(--border2); color:var(--txt);
+    padding:11px 13px; border-radius:9px; font-size:.95rem; font-family:var(--body); font-weight:400;
+    transition:.18s;
+  }
+  input::placeholder{color:#5a5a68}
+  input:focus,select:focus{outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(212,175,55,.15)}
+  .row{display:flex; gap:12px}
+  .row>*{flex:1}
+
+  button{
+    cursor:pointer; border:none; border-radius:9px; padding:11px 16px; font-weight:600;
+    font-size:.82rem; text-transform:uppercase; letter-spacing:1px; transition:.18s; margin-top:16px; width:100%;
+    font-family:var(--body);
+  }
+  .btn-primary{
+    background:linear-gradient(180deg,#e21219,#a60810); color:#fff;
+    box-shadow:0 6px 18px -6px rgba(210,10,17,.7), inset 0 1px 0 rgba(255,255,255,.25);
+    border:1px solid #7d060c;
+  }
+  .btn-primary:hover{filter:brightness(1.12); transform:translateY(-1px)}
+  .btn-primary:active{transform:translateY(0)}
+  .btn-mini{
+    width:auto; margin:0; padding:6px 12px; font-size:.68rem; background:var(--panel3); color:var(--txt);
+    border:1px solid var(--border2);
+  }
+  .btn-mini:hover{border-color:var(--gold); color:var(--gold2)}
+  .btn-win{
+    background:linear-gradient(180deg,#34d684,#1c9c5d); color:#04210f; border:1px solid #157a47;
+    box-shadow:0 5px 14px -6px rgba(46,194,122,.6), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .btn-win:hover{filter:brightness(1.08)}
+  .btn-del{background:transparent; color:var(--red2); border:1px solid rgba(255,45,45,.4); width:auto; margin:0; padding:5px 10px; font-size:.68rem}
+  .btn-del:hover{background:rgba(255,45,45,.12); border-color:var(--red2)}
+
+  .bettor-pill{
+    display:flex; justify-content:space-between; align-items:center;
+    background:linear-gradient(180deg,#1c1c25,#15151c); border:1px solid var(--border); border-left:3px solid var(--gold);
+    border-radius:10px; padding:11px 14px; margin-bottom:9px;
+  }
+  .bettor-pill b{font-size:1rem; font-weight:600; letter-spacing:.5px}
+  .balance{font-family:var(--display); font-weight:400; letter-spacing:1px; font-size:1.05rem; background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .balance.neg{background:none; color:var(--red2); -webkit-text-fill-color:var(--red2)}
+  .full{grid-column:1/-1}
+
+  /* ---------- Combate (tarjeta tipo cartel) ---------- */
+  .fight{
+    position:relative; background:linear-gradient(180deg,#16161e,#0e0e13);
+    border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:18px; overflow:hidden;
+    box-shadow:0 20px 45px -30px #000;
+  }
+  .fight::after{content:""; position:absolute; inset:0; background:radial-gradient(700px 120px at 50% 0,rgba(212,175,55,.06),transparent 70%); pointer-events:none}
+  .fight.closed{opacity:.82}
+  .fight-head{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px}
+  .fight-title{font-family:var(--display); font-weight:400; letter-spacing:1px; text-transform:uppercase; font-size:1.35rem; color:#fff}
+  .vs{color:var(--gold); margin:0 10px; font-family:var(--display); font-style:normal; font-size:1rem; vertical-align:middle}
+  .tag{font-size:.62rem; padding:4px 11px; border-radius:20px; font-weight:600; text-transform:uppercase; letter-spacing:1.5px; border:1px solid}
+  .tag.open{background:rgba(46,194,122,.12); color:#5fe6a3; border-color:rgba(46,194,122,.5)}
+  .tag.closed{background:rgba(210,10,17,.12); color:#ff7070; border-color:rgba(210,10,17,.5)}
+  .corners{display:grid; grid-template-columns:1fr 1fr; gap:14px; position:relative}
+  .corner{position:relative; border-radius:12px; padding:15px; border:1px solid; background:linear-gradient(180deg,rgba(255,255,255,.02),transparent)}
+  .corner.red{border-color:rgba(210,10,17,.55); box-shadow:inset 0 0 30px rgba(210,10,17,.10)}
+  .corner.blue{border-color:rgba(31,111,235,.55); box-shadow:inset 0 0 30px rgba(31,111,235,.10)}
+  .corner .cname{font-family:var(--display); font-weight:400; letter-spacing:.5px; font-size:1.2rem; margin-bottom:8px; color:#fff}
+  .corner.win{border-color:var(--gold); box-shadow:0 0 0 2px var(--gold) inset, 0 0 26px rgba(212,175,55,.3)}
+  .stat{font-size:.78rem; color:var(--muted); margin:4px 0; font-weight:300}
+  .stat b{color:var(--txt); font-weight:600}
+  .odds{font-family:var(--display); font-weight:400; font-size:2rem; margin:8px 0; letter-spacing:1px}
+  .odds.red{color:var(--red2)} .odds.blue{color:var(--blue2)}
+  .barwrap{height:9px; background:#0c0c11; border:1px solid var(--border); border-radius:6px; overflow:hidden; margin:12px 0; display:flex}
+  .barwrap .br{background:linear-gradient(90deg,#ff2d2d,#a60810)} .barwrap .bb{background:linear-gradient(90deg,#1f6feb,#4d9bff)}
+  .bets-list{margin-top:12px; font-size:.8rem}
+  .bet-line{display:flex; justify-content:space-between; padding:5px 0; border-top:1px solid var(--border); color:var(--muted)}
+  .bet-line span:first-child{color:var(--txt); font-weight:400}
+  .empty{color:var(--muted); font-style:italic; text-align:center; padding:24px; font-size:.92rem}
+  .winrow{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
+  .winrow button{margin:0}
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px);
+    background:linear-gradient(180deg,#1d1d27,#131319); border:1px solid var(--gold);
+    padding:13px 26px; border-radius:11px; font-size:.9rem; font-weight:400; letter-spacing:.5px;
+    opacity:0; pointer-events:none; transition:.3s; z-index:99;
+    box-shadow:0 16px 40px -12px #000, 0 0 20px rgba(212,175,55,.25);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .hint{font-size:.74rem; color:var(--muted); margin-top:8px; line-height:1.5; font-weight:300}
+  .hint b{color:var(--gold2); font-weight:600}
+  .payout{color:#5fe6a3; font-weight:600}
+
+  /* ---------- Layout con columna derecha ---------- */
+  .layout{display:grid; grid-template-columns:300px minmax(0,1fr) 330px; gap:18px; align-items:start; margin-top:24px}
+  .main{min-width:0}
+  .main .grid{margin-top:0}
+  .rail{position:sticky; top:18px}
+  @media(max-width:1200px){
+    .layout{grid-template-columns:1fr}
+    .rail{position:static}
+  }
+  /* perspectiva 3D tipo triple pantalla: cada panel lleva su propia perspectiva,
+     así el efecto es estable y no se deforma al hacer scroll (sticky) */
+  @media(min-width:1200px){
+    .rail{transition:transform .4s ease; transform-style:preserve-3d}
+    .rail-left{transform:perspective(1700px) rotateY(7deg)}
+    .rail:not(.rail-left){transform:perspective(1700px) rotateY(-7deg)}
+    /* al pasar el ratón, el panel se endereza para leerlo cómodo */
+    .rail:hover{transform:perspective(1700px) rotateY(0deg)}
+  }
+
+  /* ---------- Tabla de ranking ---------- */
+  .rank-table{width:100%; border-collapse:collapse}
+  .rank-table th{text-transform:uppercase; letter-spacing:1px; font-size:.58rem; color:var(--muted); font-weight:600; text-align:left; padding:6px 4px; border-bottom:1px solid var(--border)}
+  .rank-table th.c,.rank-table td.c{text-align:center}
+  .rank-table td{padding:9px 4px; border-bottom:1px solid var(--border); font-size:.86rem}
+  .rank-table tr:last-child td{border-bottom:none}
+  .pos{font-family:var(--display); color:var(--muted); font-size:1.05rem; width:34px; text-align:center}
+  .rank-name{font-weight:600; letter-spacing:.3px}
+  .rec-w{color:#5fe6a3; font-weight:600} .rec-l{color:#ff7070; font-weight:600}
+  .rank-pct{font-family:var(--display); font-size:.95rem; color:var(--gold2)}
+  .champ td{background:linear-gradient(90deg,rgba(212,175,55,.16),transparent)}
+  .champ .pos{background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .champ .rank-name{background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .belt-tag{font-size:.55rem; letter-spacing:1.5px; color:#08080a; background:var(--gold-grad); padding:2px 7px; border-radius:10px; font-weight:700; text-transform:uppercase; margin-left:6px; vertical-align:middle}
+  .belt-tag.bmf{background:linear-gradient(180deg,#2c2c2c,#0a0a0a); color:var(--gold2); border:1px solid var(--gold)}
+  .x-fighter{width:auto; margin:0 0 0 6px; padding:0 5px; font-size:.62rem; background:transparent; color:#5a5a68; border:1px solid transparent; vertical-align:middle; line-height:1.4}
+  .x-fighter:hover{color:var(--red2); border-color:rgba(255,45,45,.4)}
+
+  /* ---------- Secciones del cartel (fight card) ---------- */
+  .card-section{margin-bottom:26px}
+  .card-section-title{
+    font-family:var(--display); font-weight:400; letter-spacing:1.5px; text-transform:uppercase;
+    font-size:1.15rem; color:#fff; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; transition:color .15s;
+  }
+  .card-section-title:hover{color:var(--gold2)}
+  .cs-chevron{font-size:.7rem; color:var(--gold); width:14px; flex:0 0 auto}
+  .cs-count{font-family:var(--body); font-size:.6rem; font-weight:600; color:#08080a; background:var(--gold-grad); padding:2px 8px; border-radius:10px; letter-spacing:.5px}
+  .tag.fotn-tag{background:var(--gold-grad); color:#08080a; border-color:var(--gold); font-weight:700}
+  .fight.is-fotn{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset, 0 22px 50px -30px #000, 0 0 30px -8px rgba(212,175,55,.4)}
+  .btn-mini.fotn-on{background:var(--gold-grad); color:#08080a; border-color:var(--gold); font-weight:700}
+
+  /* ---------- Ranking de apuestas ---------- */
+  .brank-row{display:flex; align-items:center; gap:10px; padding:9px 6px; border-bottom:1px solid var(--border)}
+  .brank-row:last-child{border-bottom:none}
+  .brank-row .pos{font-family:var(--display); color:var(--muted); font-size:1.05rem; width:30px; text-align:center; flex:0 0 auto}
+  .brank-body{min-width:0; flex:1}
+  .brank-name{font-weight:600; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .brank-sub{font-size:.68rem; color:var(--muted); margin-top:2px}
+  .brank-sub b{color:var(--txt)}
+  .brank-lost{color:var(--red2); font-weight:600}
+  .brank-bal{font-family:var(--display); font-size:1.05rem; flex:0 0 auto; background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .brank-bal.neg{background:none; color:var(--red2); -webkit-text-fill-color:var(--red2)}
+
+  /* ---------- Cuadro del torneo (bracket estilo Champions) ---------- */
+  .bracket{display:flex; align-items:stretch; min-width:max-content; padding:6px 4px 4px}
+  .bk-col{display:flex; flex-direction:column; flex:1 0 195px; min-width:195px}
+  .bk-round{font-family:var(--display); text-transform:uppercase; letter-spacing:2px; font-size:.82rem; color:var(--gold2); text-align:center; padding-bottom:4px; margin-bottom:6px}
+  .bk-round::after{content:""; display:block; width:34px; height:2px; background:var(--gold-grad); margin:8px auto 0; border-radius:2px; box-shadow:0 0 8px rgba(212,175,55,.5)}
+  .round{flex:1; display:flex; flex-direction:column}
+  .match{flex:1; display:flex; align-items:center; justify-content:center; position:relative; padding:7px 0}
+  .bk-match{position:relative; width:calc(100% - 46px); margin:0 23px; background:linear-gradient(180deg,#1c1c25,#121219); border:1px solid var(--border2); border-radius:11px; overflow:hidden; box-shadow:0 10px 24px -16px #000, inset 0 1px 0 rgba(255,255,255,.04)}
+  .bk-slot{display:flex; align-items:center; padding:9px 12px; font-size:.85rem; color:var(--txt); white-space:nowrap; overflow:hidden}
+  .bk-slot .bk-nm{overflow:hidden; text-overflow:ellipsis}
+  .bk-slot+.bk-slot{border-top:1px solid var(--border)}
+  .bk-slot.empty .bk-nm{color:#55556a; font-style:italic}
+  .bk-slot.win{font-weight:700; color:#fff; background:linear-gradient(90deg,rgba(212,175,55,.22),rgba(212,175,55,.03))}
+  .bk-slot.win::after{content:"✓"; margin-left:auto; padding-left:8px; color:var(--gold2); font-weight:700}
+  .bk-slot.out{color:#6a6a78}
+  .bk-slot.out .bk-nm{text-decoration:line-through}
+  .bk-champ{position:relative; width:calc(100% - 46px); margin:0 23px; display:flex; align-items:center; gap:8px; justify-content:center;
+    background:var(--gold-grad); color:#08080a; font-weight:800; padding:15px 12px; border-radius:12px; font-size:.95rem;
+    box-shadow:0 0 30px -6px rgba(212,175,55,.6)}
+  .bk-champ span{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* conectores */
+  .bk-col:not(:last-child) .bk-match::after{content:""; position:absolute; left:100%; top:50%; width:23px; height:2px; background:var(--border2); transform:translateY(-50%)}
+  .bk-col:not(:first-child) .bk-match::before,
+  .bk-col:not(:first-child) .bk-champ::before{content:""; position:absolute; right:100%; top:50%; width:23px; height:2px; background:var(--border2); transform:translateY(-50%)}
+  .bk-col:not(:last-child) .match:nth-child(odd):not(:only-child)::after{content:""; position:absolute; left:100%; top:50%; width:2px; height:100%; background:var(--border2)}
+
+  /* ---------- Tablón de noticias ---------- */
+  .news-board{
+    margin:30px auto 0; max-width:920px;
+    background:linear-gradient(180deg,#17171f,#101015); border:1px solid var(--border); border-radius:16px; padding:20px;
+    box-shadow:0 18px 40px -28px #000, inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .news-head{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px}
+  .news-item{
+    margin-bottom:10px; overflow:hidden;
+    background:linear-gradient(180deg,#1b1b24,#15151c); border:1px solid var(--border); border-left:3px solid var(--gold);
+    border-radius:10px; transition:border-color .2s, box-shadow .2s;
+  }
+  .news-item:last-child{margin-bottom:0}
+  .news-item.fresh{border-left-color:var(--red2); box-shadow:0 0 22px -6px rgba(210,10,17,.4)}
+  .news-item.open{border-left-color:var(--gold2); box-shadow:0 0 24px -8px rgba(212,175,55,.5)}
+  .ni-head{display:flex; gap:13px; align-items:flex-start; padding:12px 14px}
+  .news-item .ni-head[onclick]{cursor:pointer}
+  .news-item .ni-head[onclick]:hover{background:rgba(212,175,55,.06)}
+  .news-item .ni-icon{font-size:1.5rem; line-height:1.2; flex:0 0 auto}
+  .ni-body{min-width:0; flex:1}
+  .ni-badge{display:inline-block; font-size:.55rem; letter-spacing:1.5px; text-transform:uppercase; font-weight:700; color:#fff; background:linear-gradient(180deg,#e21219,#a60810); padding:2px 8px; border-radius:10px; margin-bottom:5px}
+  .ni-text{font-size:.95rem; font-weight:400; color:var(--txt); line-height:1.4}
+  .ni-time{font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-top:4px}
+  .ni-chevron{flex:0 0 auto; color:var(--gold2); font-size:.7rem; align-self:center; opacity:.8}
+  .ni-imgwrap{position:relative; border-top:1px solid var(--border); background:#0a0a0d center/cover no-repeat; overflow:hidden; display:flex; align-items:center; justify-content:center}
+  .ni-imgwrap::before{content:""; position:absolute; inset:0; background:inherit; filter:blur(26px) brightness(.45); transform:scale(1.2)}
+  .ni-img{position:relative; display:block; max-width:100%; max-height:560px; width:auto; height:auto; object-fit:contain; padding:10px}
+  /* compositor de noticias (admin) */
+  .news-composer{background:rgba(0,0,0,.22); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:16px; display:flex; flex-direction:column; gap:10px}
+  .news-drop{border:2px dashed var(--border2); border-radius:10px; padding:18px; text-align:center; color:var(--muted); font-size:.85rem; cursor:pointer; transition:.15s}
+  .news-drop:hover{border-color:var(--gold); color:var(--gold2)}
+  .news-drop.drag{border-color:var(--gold2); background:rgba(212,175,55,.1); color:var(--gold2)}
+  .news-preview{max-width:100%; max-height:240px; border-radius:10px; object-fit:contain; align-self:flex-start}
+  .ni-details{padding:12px 18px 16px 52px; border-top:1px solid var(--border); background:rgba(0,0,0,.22)}
+  .ni-detail{font-size:.9rem; color:#d8d5cd; line-height:1.65; margin:0 0 10px; text-align:justify}
+  .ni-detail:last-child{margin-bottom:0}
+  .ni-detail:first-child{font-size:.98rem; color:#fff; font-weight:500}
+
+  /* ---------- Permisos / login ---------- */
+  body:not(.role-admin) .admin-only{display:none !important}
+  .auth-gate{position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:radial-gradient(800px 400px at 50% 0,rgba(210,10,17,.25),transparent 60%), rgba(6,6,9,.92); backdrop-filter:blur(6px)}
+  .auth-box{width:100%; max-width:360px; background:linear-gradient(180deg,#17171f,#0e0e13); border:1px solid var(--border2); border-radius:16px;
+    padding:26px; box-shadow:0 30px 70px -30px #000, inset 0 1px 0 rgba(255,255,255,.05)}
+  .auth-box label{margin-top:12px}
+  .auth-tabs{display:flex; gap:8px; margin-bottom:14px}
+  .auth-tab{flex:1; margin:0; background:var(--panel2); color:var(--muted); border:1px solid var(--border); font-weight:600}
+  .auth-tab.active{background:var(--gold-grad); color:#08080a; border-color:var(--gold)}
+  .auth-error{color:#ff7070; font-size:.82rem; min-height:18px; text-align:center}
+  #userbar{position:fixed; top:14px; left:16px; z-index:120; display:flex; align-items:center; gap:10px;
+    background:linear-gradient(180deg,#1d1d27,#131319); border:1px solid var(--border2); border-radius:30px; padding:6px 8px 6px 16px;
+    box-shadow:0 12px 30px -14px #000; font-size:.85rem; font-weight:500}
+  #userbar .btn-mini{margin:0}
+
+  /* ---------- Cuenta atrás ---------- */
+  #countdownWidget{
+    position:fixed; top:14px; right:16px; z-index:110;
+    background:linear-gradient(180deg,#16161d,#0d0d12);
+    border:1px solid var(--border2); border-radius:14px; padding:13px 20px;
+    box-shadow:0 20px 50px -20px #000, inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .cd-head{font-size:.56rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--muted); margin-bottom:4px; display:flex; align-items:center; gap:7px}
+  .cd-dot{width:7px; height:7px; background:var(--red2); border-radius:50%; box-shadow:0 0 8px var(--red2); animation:blink-dot 1s ease-in-out infinite; flex:0 0 auto}
+  @keyframes blink-dot{0%,100%{opacity:1}50%{opacity:.15}}
+  .cd-name{font-family:var(--display); font-size:.9rem; letter-spacing:1px; text-transform:uppercase; color:#fff; margin-bottom:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:320px}
+  .cd-digits{display:flex; align-items:flex-end; gap:5px}
+  .cd-unit{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .cd-box{background:#09090e; border:1px solid var(--border); border-radius:8px; padding:7px 4px; min-width:58px; text-align:center}
+  .cd-n{font-family:var(--display); font-size:2rem; letter-spacing:2px; line-height:1; display:block; background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .cd-lbl{font-size:.5rem; font-weight:700; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase}
+  .cd-sep{font-family:var(--display); font-size:1.5rem; color:var(--border2); padding-bottom:20px; flex:0 0 auto; line-height:1}
+  @media(max-width:900px){#countdownWidget{display:none !important}}
+  .role-badge{font-size:.55rem; letter-spacing:1px; font-weight:700; color:#08080a; background:var(--gold-grad); padding:2px 7px; border-radius:10px; margin-left:4px}
+  .role-badge.user{background:var(--panel3); color:var(--muted)}
+  .user-row{
+    display:flex; align-items:center; gap:10px; padding:9px 11px;
+    border-radius:10px; margin-bottom:6px;
+    background:linear-gradient(135deg,#1c1c25,#141419);
+    border:1px solid var(--border); transition:border-color .15s, box-shadow .15s;
+  }
+  .user-row:last-child{margin-bottom:0}
+  .user-row:hover{border-color:var(--border2)}
+  .user-row.is-admin{border-left:3px solid var(--gold); box-shadow:0 0 22px -10px rgba(212,175,55,.22)}
+  .user-avatar{
+    width:34px; height:34px; border-radius:50%; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-size:1.05rem; letter-spacing:.5px; font-weight:400;
+  }
+  .user-avatar.adm{background:var(--gold-grad); color:#08080a}
+  .user-avatar.reg{background:#1e1e2a; color:var(--muted); border:1px solid var(--border2)}
+  .user-info{flex:1; min-width:0}
+  .user-name{font-size:.88rem; font-weight:600; letter-spacing:.3px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .user-badges{display:flex; gap:4px; margin-top:3px; flex-wrap:wrap}
+  .user-actions{display:flex; align-items:center; gap:5px; flex:0 0 auto}
+  .btn-role-toggle{
+    cursor:pointer; border-radius:7px; padding:4px 9px; font-size:.58rem;
+    font-weight:700; text-transform:uppercase; letter-spacing:.8px;
+    font-family:var(--body); margin:0; width:auto; transition:.15s; border:1px solid;
+  }
+  .btn-role-toggle.promote{background:rgba(212,175,55,.12); color:var(--gold2); border-color:rgba(212,175,55,.35)}
+  .btn-role-toggle.promote:hover{background:rgba(212,175,55,.25); border-color:var(--gold)}
+  .btn-role-toggle.demote{background:var(--panel3); color:var(--muted); border-color:var(--border2)}
+  .btn-role-toggle.demote:hover{color:var(--txt); border-color:var(--border2)}
+  .btn-icon-del{
+    cursor:pointer; border:1px solid rgba(255,45,45,.3); border-radius:7px;
+    background:transparent; color:var(--red2); padding:4px 8px;
+    font-size:.72rem; font-weight:700; margin:0; width:auto; transition:.15s;
+  }
+  .btn-icon-del:hover{background:rgba(255,45,45,.12); border-color:var(--red2)}
+
+  /* ---------- Fondo: jaula / octágono UFC difuminado ---------- */
+  .bg{position:fixed; inset:0; z-index:-1; pointer-events:none; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .bg svg{width:100vw; height:100vh; filter:blur(5px) saturate(1.15); opacity:.55}
+  .bg::after{content:""; position:absolute; inset:0; background:
+      radial-gradient(120% 90% at 50% 50%,transparent 30%,rgba(8,8,10,.55) 78%,rgba(8,8,10,.92) 100%);}
+  @media(max-width:820px){ .bg svg{opacity:.4} }
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <svg viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="spot" cx="50%" cy="38%" r="60%">
+        <stop offset="0%" stop-color="#d20a11" stop-opacity=".55"/>
+        <stop offset="45%" stop-color="#6e0608" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="goldStroke" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f7e9a8"/>
+        <stop offset="40%" stop-color="#d4af37"/>
+        <stop offset="75%" stop-color="#8a6d1e"/>
+        <stop offset="100%" stop-color="#f4d77a"/>
+      </linearGradient>
+      <pattern id="mesh" width="26" height="26" patternUnits="userSpaceOnUse">
+        <path d="M0,0 L26,26 M26,0 L0,26" stroke="#d4af37" stroke-opacity=".22" stroke-width="1.1"/>
+      </pattern>
+      <clipPath id="octaClip">
+        <polygon points="649.5,403.4 503.4,549.5 296.6,549.5 150.5,403.4 150.5,196.6 296.6,50.5 503.4,50.5 649.5,196.6"/>
+      </clipPath>
+    </defs>
+
+    <!-- foco / spotlight rojo -->
+    <rect x="0" y="0" width="800" height="600" fill="url(#spot)"/>
+
+    <!-- malla de la jaula dentro del octágono -->
+    <g clip-path="url(#octaClip)">
+      <rect x="120" y="20" width="560" height="560" fill="url(#mesh)"/>
+      <rect x="120" y="20" width="560" height="560" fill="#000" fill-opacity=".25"/>
+    </g>
+
+    <!-- aros del octágono (jaula) -->
+    <polygon points="649.5,403.4 503.4,549.5 296.6,549.5 150.5,403.4 150.5,196.6 296.6,50.5 503.4,50.5 649.5,196.6"
+             fill="none" stroke="url(#goldStroke)" stroke-width="7" stroke-linejoin="round"/>
+    <polygon points="619.5,388.4 482.4,524.5 317.6,524.5 180.5,388.4 180.5,211.6 317.6,75.5 482.4,75.5 619.5,211.6"
+             fill="none" stroke="url(#goldStroke)" stroke-width="2.5" stroke-opacity=".6" stroke-linejoin="round"/>
+
+    <!-- postes -->
+    <g fill="url(#goldStroke)" fill-opacity=".8">
+      <circle cx="649.5" cy="403.4" r="7"/><circle cx="503.4" cy="549.5" r="7"/>
+      <circle cx="296.6" cy="549.5" r="7"/><circle cx="150.5" cy="403.4" r="7"/>
+      <circle cx="150.5" cy="196.6" r="7"/><circle cx="296.6" cy="50.5" r="7"/>
+      <circle cx="503.4" cy="50.5" r="7"/><circle cx="649.5" cy="196.6" r="7"/>
+    </g>
+
+    <!-- marca central tenue -->
+    <text x="400" y="320" text-anchor="middle" font-family="Anton, Impact, sans-serif"
+          font-size="150" fill="#fff" fill-opacity=".05" letter-spacing="6">UFC</text>
+  </svg>
+</div>
+
+<!-- ===== PANTALLA DE LOGIN / REGISTRO ===== -->
+<div id="authGate" class="auth-gate">
+  <div class="auth-box">
+    <div class="brand" style="font-size:2.6rem; text-align:center; margin-bottom:4px"><span class="ufc">UFC</span> <span class="bet">BETTING</span></div>
+    <div class="tagline" style="text-align:center; margin-bottom:18px">Accede con tu usuario</div>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="auth-tab active" onclick="authTab('login')">Entrar</button>
+      <button id="tabReg" class="auth-tab" onclick="authTab('register')">Registrarse</button>
+    </div>
+    <div id="authError" class="auth-error"></div>
+    <label>Usuario</label>
+    <input id="authUser" maxlength="20" placeholder="Tu nombre de usuario" onkeydown="if(event.key==='Enter')authSubmit()">
+    <label>Contraseña</label>
+    <input id="authPass" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')authSubmit()">
+    <button id="authSubmit" class="btn-primary" onclick="authSubmit()">Entrar</button>
+    <p class="hint" id="authHint"></p>
+    <p class="hint" style="opacity:.7">⚠️ Acceso local entre amigos: no es seguridad real, las contraseñas se guardan en este navegador.</p>
+  </div>
+</div>
+
+<!-- barra de usuario -->
+<div id="userbar" style="display:none">
+  <span id="userbarName"></span>
+  <button class="btn-mini" onclick="logout()">Salir</button>
+</div>
+
+<!-- cuenta atrás próximo evento -->
+<div id="countdownWidget" style="display:none">
+  <div class="cd-head"><span class="cd-dot"></span>Próximo evento</div>
+  <div class="cd-name" id="cdEventName"></div>
+  <div class="cd-digits">
+    <div class="cd-unit"><div class="cd-box"><span class="cd-n" id="cdDays">00</span></div><span class="cd-lbl">Días</span></div>
+    <span class="cd-sep">:</span>
+    <div class="cd-unit"><div class="cd-box"><span class="cd-n" id="cdHours">00</span></div><span class="cd-lbl">Horas</span></div>
+    <span class="cd-sep">:</span>
+    <div class="cd-unit"><div class="cd-box"><span class="cd-n" id="cdMins">00</span></div><span class="cd-lbl">Min</span></div>
+    <span class="cd-sep">:</span>
+    <div class="cd-unit"><div class="cd-box"><span class="cd-n" id="cdSecs">00</span></div><span class="cd-lbl">Seg</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand"><span class="ufc">UFC</span> <span class="bet">BETTING</span></div>
+    <div class="tagline">Casa de apuestas · Dinero ficticio · <b>2 luchan, el resto apuesta</b></div>
+    <div class="belt"></div>
+  </div>
+
+  <div id="storageWarn" style="display:none; background:rgba(245,197,66,.12); border:1px solid var(--gold); color:var(--gold); border-radius:10px; padding:10px 14px; margin-top:14px; font-size:.85rem; text-align:center">
+    ⚠️ Tu navegador no permite guardar datos al abrir el archivo así. La app funciona, pero <b>se borrará al recargar</b>. Para guardar entre sesiones, ábrelo desde un servidor local o usa el botón "Exportar copia".
+  </div>
+
+  <div class="layout">
+   <aside class="rail rail-left">
+     <div class="card">
+       <h2>🏦 Banco · Préstamos</h2>
+       <label>Apostador</label>
+       <select id="loanBettor"></select>
+       <div id="loanBettorDisplay" style="display:none; padding:11px 13px; background:#0c0c11; border:1px solid var(--border2); border-radius:9px; font-size:.95rem; color:var(--txt)"></div>
+       <label>Cantidad a pedir ($ · máx 5000)</label>
+       <input id="loanAmount" type="number" min="1" max="5000" step="1" placeholder="1000">
+       <button class="btn-primary" onclick="takeLoan()">Pedir préstamo</button>
+       <p class="hint">
+         Máximo <b>$5000</b> por préstamo · solo <b>1 préstamo activo</b> por apostador.<br>
+         Interés progresivo al pagar: <b>5%</b> base <b>+5%</b> por cada combate resuelto desde que lo pediste (tope <b>50%</b>).<br>
+         Tras pagar, ese apostador entra en <b>cooldown de 3 combates</b> antes de poder pedir otro.
+       </p>
+     </div>
+
+     <div class="card" style="margin-top:18px">
+       <h2>💰 Ranking de apuestas</h2>
+       <p class="hint" style="margin-top:0; margin-bottom:12px">Posición según el <b>beneficio neto</b> en apuestas (ganado − perdido).</p>
+       <div id="betRankingList"></div>
+     </div>
+
+     <div class="card admin-only" style="margin-top:18px">
+       <h2>👥 Usuarios</h2>
+       <p class="hint" style="margin-top:0; margin-bottom:10px">Gestiona cuentas y roles (solo admin).</p>
+       <div id="usersList"></div>
+     </div>
+
+     <div class="card admin-only" style="margin-top:18px">
+       <h2>⏱ Cuenta atrás</h2>
+       <label>Nombre del evento</label>
+       <input id="eventLabel" placeholder="Ej: UFC 310 · Madrid" maxlength="40">
+       <label>Fecha y hora del evento</label>
+       <input id="eventDateTime" type="datetime-local">
+       <button class="btn-primary" onclick="setNextEvent()">Activar cuenta atrás</button>
+       <button class="btn-mini" style="margin-top:8px; width:100%; text-align:center" onclick="clearNextEvent()">✕ Quitar cuenta atrás</button>
+       <div id="eventCurrentInfo" class="hint" style="margin-top:10px"></div>
+     </div>
+   </aside>
+   <div class="main">
+  <div class="grid">
+    <!-- ===== APOSTADORES ===== -->
+    <div class="card">
+      <h2>👤 Apostadores</h2>
+      <div class="row admin-only">
+        <input id="bettorName" placeholder="Nombre del apostador" maxlength="20">
+        <button class="btn-primary" style="margin-top:0;flex:0 0 auto;width:auto" onclick="addBettor()">Añadir</button>
+      </div>
+      <p class="hint admin-only">Cada apostador empieza con <b>$1000</b> de saldo ficticio.</p>
+      <div id="bettorsList" style="margin-top:14px"></div>
+    </div>
+
+    <!-- ===== CREAR COMBATE ===== -->
+    <div class="card">
+      <h2>🆚 Crear combate</h2>
+      <label>Nombre del combate (opcional)</label>
+      <input id="fightName" placeholder="Ej: Título de peso wélter">
+      <label>Sección del cartel</label>
+      <select id="fightCard">
+        <option value="prelim">📋 Preliminar</option>
+        <option value="main" selected>🥊 Tarjeta principal</option>
+        <option value="event">🌟 Combate estelar (Main Event)</option>
+      </select>
+      <div class="row">
+        <div>
+          <label>🔴 Esquina Roja</label>
+          <select id="fighterRed"></select>
+        </div>
+        <div>
+          <label>🔵 Esquina Azul</label>
+          <select id="fighterBlue"></select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addFight()">Crear combate</button>
+    </div>
+
+    <!-- ===== HACER APUESTA ===== -->
+    <div class="card full">
+      <h2>💰 Realizar apuesta</h2>
+      <div class="row">
+        <div>
+          <label>Apostador</label>
+          <select id="betBettor"></select>
+          <div id="betBettorDisplay" style="display:none; padding:11px 13px; background:#0c0c11; border:1px solid var(--border2); border-radius:9px; font-size:.95rem; color:var(--txt)"></div>
+        </div>
+        <div>
+          <label>Combate</label>
+          <select id="betFight" onchange="refreshFighterOptions()"></select>
+        </div>
+        <div>
+          <label>Peleador elegido</label>
+          <select id="betFighter"></select>
+        </div>
+        <div>
+          <label>Cantidad ($)</label>
+          <input id="betAmount" type="number" min="1" step="1" placeholder="100">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="placeBet()">Apostar</button>
+      <p class="hint"><b>Cuotas inteligentes</b>: mezclan el dinero apostado en cada lado y el récord V-D de los luchadores. Con poco dinero manda el récord; cuanto más se apuesta, más pesa el mercado. Cobras tu apuesta × cuota.</p>
+    </div>
+  </div>
+
+  <!-- ===== COMBATES ===== -->
+  <div class="full" style="margin-top:26px">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px">
+      <h2 class="section-title">Cartelera</h2>
+      <div style="display:flex; gap:8px">
+        <button class="btn-mini" onclick="exportData()">⬇ Exportar copia</button>
+        <button class="btn-mini admin-only" onclick="document.getElementById('importFile').click()">⬆ Importar copia</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="importData(this)">
+      </div>
+    </div>
+    <div id="fightsList"></div>
+  </div>
+   </div><!-- /.main -->
+
+   <aside class="rail">
+     <div class="card">
+       <h2>🏆 Ranking UFC</h2>
+       <p class="hint" style="margin-top:0; margin-bottom:10px">Registra a los participantes; su récord (V-D) se calcula con los combates. El campeón encabeza la clasificación.</p>
+
+       <div class="row">
+         <input id="newFighter" placeholder="Nombre del participante" maxlength="20" onkeydown="if(event.key==='Enter')registerFighter()">
+         <button class="btn-primary" style="margin-top:0; flex:0 0 auto; width:auto" onclick="registerFighter()">Registrar</button>
+       </div>
+
+       <div id="rankingList" style="margin-top:14px"></div>
+
+       <div class="admin-only" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border)">
+         <label>🏅 Cinturón de campeón</label>
+         <select id="championSelect"></select>
+         <div style="display:flex; gap:8px">
+           <button class="btn-win" style="margin-top:12px" onclick="setChampion()">Dar cinturón</button>
+           <button class="btn-mini" style="margin-top:12px; padding:6px 12px" onclick="vacateBelt()">Vacar</button>
+         </div>
+       </div>
+
+       <div class="admin-only" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border)">
+         <label>🥊 Cinturón BMF</label>
+         <select id="bmfSelect"></select>
+         <div style="display:flex; gap:8px">
+           <button class="btn-win" style="margin-top:12px" onclick="setBmf()">Dar cinturón</button>
+           <button class="btn-mini" style="margin-top:12px; padding:6px 12px" onclick="vacateBmf()">Vacar</button>
+         </div>
+       </div>
+     </div>
+   </aside>
+  </div><!-- /.layout -->
+
+  <div class="news-board" style="max-width:1180px">
+    <div class="news-head">
+      <h2 class="section-title">🏆 Cuadro del Torneo</h2>
+      <div style="display:flex; gap:8px" class="admin-only">
+        <button class="btn-mini" onclick="createTournament()">🎲 Sortear torneo</button>
+        <button class="btn-mini" onclick="deleteTournament()">Borrar</button>
+      </div>
+    </div>
+    <div id="bracketBox" style="overflow-x:auto"></div>
+  </div>
+
+  <div class="news-board">
+    <div class="news-head">
+      <h2 class="section-title">📰 Tablón de noticias</h2>
+      <button class="btn-mini admin-only" onclick="clearNews()">Limpiar</button>
+    </div>
+
+    <!-- Compositor de noticias (solo admin) -->
+    <div class="news-composer admin-only">
+      <input id="newsText" placeholder="Escribe una noticia para publicar…" maxlength="200">
+      <div id="newsDrop" class="news-drop"
+           onclick="document.getElementById('newsImgInput').click()"
+           ondragover="event.preventDefault(); this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="event.preventDefault(); this.classList.remove('drag'); onComposerFile(event.dataTransfer.files[0])">
+        Arrastra una imagen aquí o haz clic para elegir
+      </div>
+      <input type="file" id="newsImgInput" accept="image/*" hidden onchange="onComposerFile(this.files[0]); this.value=''">
+      <img id="newsImgPreview" class="news-preview" style="display:none" alt="vista previa">
+      <div style="display:flex; gap:8px">
+        <button class="btn-primary" style="margin-top:0" onclick="publishNews()">Publicar noticia</button>
+        <button class="btn-mini" onclick="clearComposerImg()">Quitar imagen</button>
+      </div>
+    </div>
+
+    <div id="newsList"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const START_BALANCE = 1000;
+// ---- Configuración del banco / préstamos ----
+const LOAN_MAX        = 5000;   // cantidad máxima por préstamo
+const LOAN_COOLDOWN   = 3;      // combates resueltos a esperar tras pagar, antes de pedir otro
+const LOAN_BASE_RATE  = 0.05;   // 5% de interés base (nada más pedir)
+const LOAN_RATE_STEP  = 0.05;   // +5% por cada combate resuelto desde que se pidió
+const LOAN_RATE_CAP   = 0.50;   // tope del 50%
+// ---- Cuotas inteligentes ----
+const ODDS_K = 300;             // con este total apostado, dinero y récord pesan ~50/50 (más dinero => más peso del mercado)
+
+let bettors = [];   // {id, name, balance, loan:null|{principal,takenAt}, loanCooldownUntil}
+let fights = [];    // {id, name, red, blue, status:'open'|'closed', winner:null|'red'|'blue', bets:[{bettorId, side, amount}]}
+let nextBettorId = 1, nextFightId = 1;
+let fightClock = 0; // contador monótono de combates resueltos (para intereses y cooldown)
+let champion = null; // nombre del peleador que posee el cinturón UFC (o null = vacante)
+let bmf = null;      // nombre del peleador que posee el cinturón BMF (o null = vacante)
+let fighters = [];   // peleadores registrados en el ranking (nombres)
+let news = [];       // tablón de noticias [{ts, icon, text}]
+let fotn = null;     // id del combate marcado como "Combate de la Noche"
+let tourn = null;    // torneo de eliminación directa {size, rounds, roundNames, champion, done}
+let users = [];      // cuentas [{username, password, role:'admin'|'user'}]
+let nextEvent = null; // cuenta atrás {label, ts} o null
+let currentUser = null; // sesión actual
+let authMode = 'login'; // 'login' | 'register'
+let collapsed = {};  // secciones plegadas de la cartelera {clave:true}
+
+/* ===================== FIREBASE (modo online opcional) =====================
+   Pega aquí la config de tu proyecto Firebase (Configuración del proyecto > Tus apps > Web).
+   Mientras tenga los valores "PEGA_...", la app funciona en LOCAL como antes.
+   En cuanto pongas tu config real, pasa a modo ONLINE compartido (cuentas + datos en la nube). */
+const firebaseConfig = {
+  apiKey: "AIzaSyD3I8FxZNgff4IqGwMuB_dMf8isdHskkW4",
+  authDomain: "ufc-betting-aa47c.firebaseapp.com",
+  projectId: "ufc-betting-aa47c",
+  storageBucket: "ufc-betting-aa47c.firebasestorage.app",
+  messagingSenderId: "290922167724",
+  appId: "1:290922167724:web:645b218977f137ef5e4e09",
+  measurementId: "G-Z6KMEKTLLX"
+};
+const USE_CLOUD = typeof firebase!=='undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('PEGA')!==0;
+let db=null, fbAuth=null, cloudTimer=null, cloudReady=false;
+if(USE_CLOUD){
+  try{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); fbAuth=firebase.auth(); }
+  catch(e){ console.error('Error iniciando Firebase:', e); }
+}
+function emailFor(u){ return u.trim().toLowerCase()+'@ufc.local'; }
+function gameDoc(){ return db.collection('ufc').doc('game'); }
+// Dueño: este usuario SIEMPRE será admin (a prueba de que se borre de la lista). Pon aquí tu usuario exacto.
+const OWNER = 'Bullsito';
+
+/* ---------- persistencia (localStorage + nube opcional) ---------- */
+let storageOK = true;
+function gatherState(){
+  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,news,fotn,tourn,users,nextEvent};
+}
+function applyState(d){
+  if(!d) return;
+  bettors=d.bettors||[]; fights=d.fights||[]; nextBettorId=d.nextBettorId||1; nextFightId=d.nextFightId||1;
+  fightClock=d.fightClock||0; champion=d.champion||null; bmf=d.bmf||null; fighters=d.fighters||[];
+  news=d.news||[]; fotn=d.fotn||null; tourn=d.tourn||null; users=d.users||[];
+  nextEvent=d.nextEvent||null;
+  migrateBettors(); migrateFighters();
+}
+function save(){
+  // copia local siempre (respaldo / modo offline)
+  try{ localStorage.setItem('ufcBets', JSON.stringify(gatherState())); }
+  catch(e){ if(storageOK){ storageOK=false; console.warn('localStorage no disponible:', e); showStorageWarning(); } }
+  // nube (debounced) si está activado el modo online
+  if(USE_CLOUD) cloudSave();
+}
+function cloudSave(){
+  if(!db) return;
+  // NO escribir hasta haber recibido los datos de la nube (evita borrar todo con estado vacío)
+  if(!cloudReady){ console.warn('Guardado en nube omitido: datos aún no cargados'); return; }
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(()=>{ gameDoc().set(gatherState()).catch(e=>console.warn('Error guardando en la nube:', e)); }, 400);
+}
+function cloudSubscribe(){
+  if(!db) return;
+  gameDoc().onSnapshot(snap=>{
+    if(snap.exists) applyState(snap.data());
+    cloudReady=true; // ya tenemos los datos: a partir de ahora sí se puede guardar
+    resolveCurrentUser();
+    ensureMyBettor();
+    applyAuthUI();
+    render();
+  }, err=> console.warn('Error de sincronización:', err));
+}
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem('ufcBets'));
+    if(d) applyState(d);
+  }catch(e){ storageOK=false; }
+}
+function showStorageWarning(){
+  const w=document.getElementById('storageWarn');
+  if(w) w.style.display='block';
+}
+
+/* ---------- autenticación y permisos (control de roles, NO seguridad real) ---------- */
+function isAdmin(){ return !!currentUser && currentUser.role==='admin'; }
+function adminToast(){ toast('🔒 Solo el administrador puede hacer esto'); }
+function requireAdmin(){ if(!isAdmin()){ adminToast(); return false; } return true; }
+function authTab(mode){
+  authMode=mode;
+  document.getElementById('tabLogin').classList.toggle('active', mode==='login');
+  document.getElementById('tabReg').classList.toggle('active', mode==='register');
+  document.getElementById('authSubmit').textContent = mode==='login'? 'Entrar' : 'Crear cuenta';
+  document.getElementById('authHint').innerHTML = mode==='register'
+    ? (users.length? 'Te registrarás como <b>usuario normal</b>.' : 'Serás el <b>administrador</b> (primer usuario).')
+    : '';
+  document.getElementById('authError').textContent='';
+}
+function authSubmit(){ authMode==='register'? doRegister() : doLogin(); }
+// resuelve currentUser (rol) en modo online a partir de la sesión de Firebase + el roster
+function resolveCurrentUser(){
+  if(!USE_CLOUD) return;
+  const fu=fbAuth && fbAuth.currentUser;
+  if(!fu){ currentUser=null; return; }
+  const uname = fu.displayName || (fu.email||'').split('@')[0];
+  let entry = users.find(x=>x.username.toLowerCase()===uname.toLowerCase());
+  // El dueño siempre es admin, aunque se haya borrado de la lista
+  if(uname.toLowerCase()===OWNER.toLowerCase()){
+    if(!entry){ entry={username:uname, role:'admin'}; users.push(entry); ensureRosterCloud(); }
+    else if(entry.role!=='admin'){ entry.role='admin'; ensureRosterCloud(); }
+  } else if(!entry && cloudReady){
+    // usuario con cuenta pero ausente del roster (p.ej. tras un reseteo): re-añadir como usuario
+    entry={username:uname, role:'user'}; users.push(entry); ensureRosterCloud();
+  }
+  currentUser = entry? {username:entry.username, role:entry.role} : {username:uname, role:'user'};
+}
+// guarda SOLO la lista de usuarios en la nube (merge), sin tocar el resto del estado
+function ensureRosterCloud(){
+  if(!db || !cloudReady) return;
+  gameDoc().set({users:users}, {merge:true}).catch(e=>console.warn('Error actualizando roster:', e));
+}
+function fbErr(e){
+  const c=e&&e.code||'';
+  if(c.indexOf('email-already-in-use')>=0) return 'Ese usuario ya existe';
+  if(c.indexOf('weak-password')>=0) return 'Contraseña demasiado corta (mín. 6)';
+  if(c.indexOf('invalid-credential')>=0 || c.indexOf('wrong-password')>=0 || c.indexOf('user-not-found')>=0) return 'Usuario o contraseña incorrectos';
+  if(c.indexOf('network')>=0) return 'Sin conexión con el servidor';
+  return 'Error: '+(c||e.message||'desconocido');
+}
+function doRegister(){
+  const u=document.getElementById('authUser').value.trim();
+  const p=document.getElementById('authPass').value;
+  const err=document.getElementById('authError');
+  if(!u||!p){ err.textContent='Escribe usuario y contraseña'; return; }
+  if(USE_CLOUD){
+    err.textContent='Creando cuenta…';
+    // 1) crear la cuenta en Firebase Auth
+    fbAuth.createUserWithEmailAndPassword(emailFor(u), p)
+      .then(cred=> cred.user.updateProfile({displayName:u}))
+      // 2) leer el documento ACTUAL y añadir solo el usuario (sin tocar el resto) -> nunca borra datos
+      .then(()=> gameDoc().get())
+      .then(snap=>{
+        const data = snap.exists? snap.data() : {};
+        const list = Array.isArray(data.users)? data.users.slice() : [];
+        if(!list.some(x=>x.username.toLowerCase()===u.toLowerCase())){
+          const role = list.length===0? 'admin':'user';
+          list.push({username:u, role});
+        }
+        return gameDoc().set({users:list}, {merge:true}); // merge: solo actualiza 'users'
+      })
+      .then(()=>{ finishAuth(); toast('👋 Bienvenido, '+u); })
+      .catch(e=>{ err.textContent=fbErr(e); });
+    return;
+  }
+  // ---- modo local ----
+  if(users.some(x=>x.username.toLowerCase()===u.toLowerCase())){ err.textContent='Ese usuario ya existe'; return; }
+  const role = users.length===0? 'admin':'user';
+  const user={username:u, password:p, role};
+  users.push(user); currentUser=user;
+  localStorage.setItem('ufcCurrentUser', u);
+  save(); finishAuth();
+  toast((role==='admin'?'👑 ':'👋 ')+'Bienvenido, '+u);
+}
+function doLogin(){
+  const u=document.getElementById('authUser').value.trim();
+  const p=document.getElementById('authPass').value;
+  const err=document.getElementById('authError');
+  if(!u||!p){ err.textContent='Escribe usuario y contraseña'; return; }
+  if(USE_CLOUD){
+    err.textContent='Entrando…';
+    fbAuth.signInWithEmailAndPassword(emailFor(u), p)
+      .then(()=>{ resolveCurrentUser(); finishAuth(); toast('👋 Hola de nuevo, '+u); })
+      .catch(e=>{ err.textContent=fbErr(e); });
+    return;
+  }
+  // ---- modo local ----
+  const user=users.find(x=>x.username.toLowerCase()===u.toLowerCase() && x.password===p);
+  if(!user){ err.textContent='Usuario o contraseña incorrectos'; return; }
+  currentUser=user;
+  localStorage.setItem('ufcCurrentUser', user.username);
+  finishAuth();
+  toast('👋 Hola de nuevo, '+user.username);
+}
+function logout(){
+  if(USE_CLOUD){ fbAuth.signOut(); currentUser=null; applyAuthUI(); return; }
+  currentUser=null;
+  localStorage.removeItem('ufcCurrentUser');
+  applyAuthUI();
+}
+/* ---- gestión de usuarios (solo admin) ---- */
+function adminCountExcluding(name){
+  const n=name? name.toLowerCase():'';
+  return users.filter(u=>u.role==='admin' && u.username.toLowerCase()!==n).length;
+}
+function toggleUserRole(username){
+  if(!requireAdmin()) return;
+  const u=users.find(x=>x.username===username); if(!u) return;
+  if(u.role==='admin'){
+    if(adminCountExcluding(username)<1){ toast('Debe quedar al menos un administrador'); return; }
+    u.role='user';
+  } else u.role='admin';
+  if(currentUser && currentUser.username===username) currentUser=u; // refresca rol propio
+  save(); applyAuthUI(); render();
+  toast(u.username+' ahora es '+(u.role==='admin'?'administrador':'usuario'));
+}
+function deleteUser(username){
+  if(!requireAdmin()) return;
+  if(currentUser && currentUser.username.toLowerCase()===username.toLowerCase()){ toast('No puedes borrar tu propia cuenta'); return; }
+  const u=users.find(x=>x.username===username); if(!u) return;
+  if(u.role==='admin' && adminCountExcluding(username)<1){ toast('Debe quedar al menos un administrador'); return; }
+  if(!confirm('¿Borrar la cuenta de '+username+'?')) return;
+  users=users.filter(x=>x.username!==username);
+  save(); render();
+  toast('Cuenta borrada');
+}
+function resetUserPassword(username){
+  if(!requireAdmin()) return;
+  if(USE_CLOUD){ toast('Online: las contraseñas las gestiona Firebase (no se resetean desde aquí)'); return; }
+  const u=users.find(x=>x.username===username); if(!u) return;
+  const np=prompt('Nueva contraseña para '+username+':');
+  if(np===null) return;            // cancelado
+  if(!np.trim()){ toast('La contraseña no puede estar vacía'); return; }
+  u.password=np;
+  if(currentUser && currentUser.username===username) currentUser=u;
+  save();
+  toast('🔑 Contraseña de '+username+' actualizada');
+}
+function toggleUserRoleAt(i){ const u=users[i]; if(u) toggleUserRole(u.username); }
+function deleteUserAt(i){ const u=users[i]; if(u) deleteUser(u.username); }
+function resetUserPasswordAt(i){ const u=users[i]; if(u) resetUserPassword(u.username); }
+function renderUsers(){
+  const el=document.getElementById('usersList'); if(!el) return;
+  if(!users.length){ el.innerHTML='<p class="empty" style="padding:10px">Sin cuentas.</p>'; return; }
+  el.innerHTML=users.map((u,i)=>{
+    const me = currentUser && currentUser.username===u.username;
+    const isAdm = u.role==='admin';
+    const initial = escapeHtml(u.username.charAt(0).toUpperCase());
+    return `<div class="user-row${isAdm?' is-admin':''}">
+        <div class="user-avatar ${isAdm?'adm':'reg'}">${initial}</div>
+        <div class="user-info">
+          <span class="user-name">${escapeHtml(u.username)}</span>
+          <div class="user-badges">
+            <span class="role-badge ${isAdm?'':'user'}">${isAdm?'ADMIN':'USUARIO'}</span>
+            ${me?'<span class="role-badge user">tú</span>':''}
+          </div>
+        </div>
+        <div class="user-actions">
+          ${USE_CLOUD?'':`<button class="btn-role-toggle demote" title="Resetear contraseña" onclick="resetUserPasswordAt(${i})">🔑</button>`}
+          <button class="btn-role-toggle ${isAdm?'demote':'promote'}" onclick="toggleUserRoleAt(${i})" title="${isAdm?'Quitar admin':'Dar admin'}">
+            ${isAdm?'▼ User':'▲ Admin'}
+          </button>
+          ${me?`<div style="width:28px"></div>`:`<button class="btn-icon-del" onclick="deleteUserAt(${i})" title="Borrar cuenta">✕</button>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+function finishAuth(){
+  document.getElementById('authUser').value='';
+  document.getElementById('authPass').value='';
+  document.getElementById('authError').textContent='';
+  ensureMyBettor();
+  applyAuthUI();
+  render();
+}
+function applyAuthUI(){
+  const logged=!!currentUser;
+  const gate=document.getElementById('authGate');
+  if(gate) gate.style.display = logged? 'none':'flex';
+  document.body.classList.toggle('role-admin', logged && currentUser.role==='admin');
+  document.body.classList.toggle('role-user',  logged && currentUser.role!=='admin');
+  const ub=document.getElementById('userbar');
+  if(ub){
+    ub.style.display = logged? 'flex':'none';
+    if(logged) document.getElementById('userbarName').innerHTML =
+      escapeHtml(currentUser.username)+(currentUser.role==='admin'?' <span class="role-badge">ADMIN</span>':' <span class="role-badge user">USUARIO</span>');
+  }
+  if(!logged) authTab(authMode);
+}
+
+/* ---------- utilidades ---------- */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function money(n){ return '$'+(Math.round(n*100)/100).toLocaleString('es-ES'); }
+/* ---------- tablón de noticias ---------- */
+let newsSeq = 0;            // para ids únicos
+let newsOpen = new Set();   // titulares desplegados (en memoria)
+// récord V-D de un peleador (a partir de combates cerrados)
+function recordStr(name){
+  if(!name) return '0-0';
+  const k=name.trim().toLowerCase(); let w=0,l=0;
+  fights.forEach(f=>{ if(f.status!=='closed'||!f.winner) return;
+    const wk=(f.winner==='red'?f.red:f.blue).trim().toLowerCase();
+    const lk=(f.winner==='red'?f.blue:f.red).trim().toLowerCase();
+    if(wk===k)w++; if(lk===k)l++;
+  });
+  return w+'-'+l;
+}
+function sectionLabel(card){
+  return ({prelim:'Preliminar', main:'Tarjeta principal', event:'Combate estelar (Main Event)', tourn:'Torneo (eliminatoria)'})[card]||'Tarjeta principal';
+}
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// CRÓNICA previa de un combate anunciado
+function fightPreview(red, blue, f, pr, champIn, bmfIn){
+  const fav = pr.pRed>=pr.pBlue? red:blue;
+  const dog = pr.pRed>=pr.pBlue? blue:red;
+  const cerrado = Math.abs(pr.pRed-pr.pBlue) < 0.12;
+  const P=[];
+  P.push('📰 '+pick([
+    `La UFC ha hecho oficial el combate entre ${red} y ${blue}${f.name?', '+f.name+',':''} y la expectación se dispara.`,
+    `Ya es oficial: ${red} y ${blue} se verán las caras en el octágono${f.name?' por '+f.name:''}.`,
+    `Cartel confirmado. ${red} contra ${blue} promete ser uno de los platos fuertes de la velada.`
+  ]));
+  P.push(cerrado
+    ? `Los expertos no se ponen de acuerdo: el duelo se presenta muy parejo. En los registros, ${red} llega con un récord de ${recordStr(red)} y ${blue} con ${recordStr(blue)}.`
+    : `${fav} parte como favorito según las casas, pero ${dog} (${recordStr(dog)}) buscará dar la sorpresa. ${fav} presenta un récord de ${recordStr(fav)}.`);
+  P.push(`💱 Cuotas iniciales: ${red} a ${pr.oRed.toFixed(2)}x (${(pr.pRed*100).toFixed(0)}%) y ${blue} a ${pr.oBlue.toFixed(2)}x (${(pr.pBlue*100).toFixed(0)}%). Se moverán según el dinero que entre en cada esquina.`);
+  if(champIn) P.push('🏆 Hay un CINTURÓN de campeón en juego: quien gane se corona (o defiende) el título.');
+  if(bmfIn) P.push('🥊 El prestigioso cinturón BMF también estará sobre la mesa.');
+  P.push('🎙️ '+pick([
+    `"Voy a acabar esto pronto, no tiene nada que hacer contra mí", avisó ${fav} en la rueda de prensa.`,
+    `"Todos me dan por perdedor, y por eso voy a disfrutar callando bocas", respondió ${dog}.`,
+    `"Va a ser una guerra, pero la mano la levanto yo", sentenció ${red}.`,
+    `El cara a cara terminó con tensión y empujones: la sangre está caliente de cara al combate.`
+  ]));
+  return P;
+}
+
+// CRÓNICA posterior al combate
+function fightReport(winner, loser, f, winnerProb, total, nBets, nWin, oddsWin, isTourn, roundName){
+  const upset = winnerProb < 0.45;
+  const claro = winnerProb > 0.65;
+  const P=[];
+  P.push('📰 '+(upset? pick([
+    `¡CAMPANAZO en el octágono! ${winner} dio la sorpresa de la noche y derribó los pronósticos al vencer a ${loser}.`,
+    `Nadie lo esperaba: ${winner} desafió a las casas de apuestas y se impuso a un ${loser} que partía como favorito.`,
+    `Susto mayúsculo. ${winner} firmó el batacazo de la velada superando a ${loser}.`
+  ]) : claro? pick([
+    `${winner} no dio opción y atropelló a ${loser} en una actuación dominante.`,
+    `Exhibición de ${winner}, que cumplió con creces los pronósticos y barrió a ${loser}.`,
+    `Sin sobresaltos: ${winner} hizo valer su favoritismo y derrotó con autoridad a ${loser}.`
+  ]) : pick([
+    `${winner} se impuso a ${loser} en un combate vibrante que mantuvo en vilo a la afición.`,
+    `Duelo igualado que cayó del lado de ${winner}, que pudo con un correoso ${loser}.`,
+    `${winner} sacó la victoria ante ${loser} en una pelea de ida y vuelta.`
+  ])));
+  P.push(`El combate${f.name?' por '+f.name:''}${isTourn?' (ronda de '+roundName+' del torneo)':''} dejó nuevos números: ${winner} mejora a ${recordStr(winner)}, mientras que ${loser} cae a ${recordStr(loser)} y deberá reponerse del golpe.`);
+  if(total>0){
+    if(nWin>0) P.push(`💰 En las apuestas se movieron ${money(total)} repartidos en ${nBets} boleto(s). ${nWin} apostador(es) acertaron y cobraron a una cuota de ${oddsWin.toFixed(2)}x.`);
+    else P.push(`💰 Las apuestas movieron ${money(total)}, pero nadie acertó al ganador: el bote entero se lo queda la casa.`);
+  } else {
+    P.push('💰 Esta vez el combate no registró apuestas.');
+  }
+  if(isTourn) P.push(`🏟️ Con esta victoria, ${winner} avanza en el cuadro del torneo. ${loser} queda eliminado.`);
+  P.push('🎙️ '+(upset? pick([
+    `"¿Quién es el favorito ahora?", gritó ${winner} mirando a las cámaras.`,
+    `"Nadie creía en mí. Esto es para los que dudaron", declaró un emocionado ${winner}.`
+  ]) : pick([
+    `"Os lo dije, soy de otro nivel", proclamó ${winner} tras levantar el brazo.`,
+    `"Quiero la revancha, esto no queda así", reclamó un dolido ${loser}.`,
+    `"Es solo el principio, voy a por el título", avisó ${winner}.`
+  ])));
+  return P;
+}
+const MAX_NEWS_IMAGES = 6; // límite de imágenes guardadas (para no superar el tamaño de la nube)
+function addNews(icon, text, details, img){
+  news.unshift({id:'n'+(Date.now())+'-'+(newsSeq++), ts:Date.now(), icon, text, details:Array.isArray(details)?details:[], img:img||null});
+  if(news.length>60) news.length=60; // límite de noticias
+  pruneNewsImages();
+}
+// conserva solo las imágenes de las noticias más recientes
+function pruneNewsImages(){
+  let count=0;
+  for(let i=0;i<news.length;i++){
+    if(news[i] && news[i].img){ count++; if(count>MAX_NEWS_IMAGES) delete news[i].img; }
+  }
+}
+// compresión de imagen en el navegador (reduce mucho el tamaño antes de guardar)
+function compressImage(file, cb){
+  if(!file || !/^image\//.test(file.type)){ toast('Selecciona un archivo de imagen'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=720; let w=img.width, h=img.height;
+      if(w>h && w>max){ h=Math.round(h*max/w); w=max; }
+      else if(h>=w && h>max){ w=Math.round(w*max/h); h=max; }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.6));
+    };
+    img.onerror=()=>toast('No se pudo leer la imagen');
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+// ---- compositor de noticias (solo admin) ----
+let composerImg = null;
+function onComposerFile(file){
+  if(!file) return;
+  compressImage(file, dataUrl=>{
+    composerImg = dataUrl;
+    const pv=document.getElementById('newsImgPreview');
+    if(pv){ pv.src=dataUrl; pv.style.display='block'; }
+    const dz=document.getElementById('newsDrop'); if(dz) dz.textContent='Imagen lista ✓ (clic para cambiar)';
+  });
+}
+function clearComposerImg(){
+  composerImg=null;
+  const pv=document.getElementById('newsImgPreview'); if(pv){ pv.src=''; pv.style.display='none'; }
+  const dz=document.getElementById('newsDrop'); if(dz) dz.textContent='Arrastra una imagen aquí o haz clic para elegir';
+}
+function publishNews(){
+  if(!requireAdmin()) return;
+  const inp=document.getElementById('newsText');
+  const txt=(inp.value||'').trim();
+  if(!txt && !composerImg){ toast('Escribe un texto o añade una imagen'); return; }
+  addNews('📰', txt||'📸 Publicación de la organización', [], composerImg);
+  inp.value=''; clearComposerImg();
+  save(); render();
+  toast('Noticia publicada');
+}
+function clearNews(){
+  if(!requireAdmin()) return;
+  if(!news.length) return;
+  if(!confirm('¿Vaciar el tablón de noticias?')) return;
+  news=[]; save(); render();
+}
+function fmtNewsTime(ts){
+  try{ return new Date(ts).toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+  catch(e){ return ''; }
+}
+function toggleNewsItem(id){
+  if(newsOpen.has(id)) newsOpen.delete(id); else newsOpen.add(id);
+  renderNews();
+}
+function renderNews(){
+  const el=document.getElementById('newsList'); if(!el) return;
+  if(!news.length){ el.innerHTML='<p class="empty">Aún no hay noticias. Crea un combate para empezar a generar titulares.</p>'; return; }
+  el.innerHTML = news.map((n,i)=>{
+    const id = n.id || ('t'+n.ts);
+    const has = n.details && n.details.length;
+    const open = newsOpen.has(id);
+    return `<div class="news-item${i===0?' fresh':''}${open?' open':''}">
+        <div class="ni-head" ${has?`onclick="toggleNewsItem('${id}')"`:''}>
+          <span class="ni-icon">${n.icon||'📰'}</span>
+          <div class="ni-body">
+            ${i===0?'<span class="ni-badge">Última hora</span>':''}
+            <div class="ni-text">${escapeHtml(n.text)}</div>
+            <div class="ni-time">${fmtNewsTime(n.ts)}${has?' · '+(open?'ocultar detalles':'ver más')+'':''}</div>
+          </div>
+          ${has?`<span class="ni-chevron">${open?'▲':'▼'}</span>`:''}
+        </div>
+        ${n.img?`<div class="ni-imgwrap" style="background-image:url('${n.img}')"><img class="ni-img" src="${n.img}" alt="imagen de la noticia"></div>`:''}
+        ${has?`<div class="ni-details"${open?'':' style="display:none"'}>
+            ${n.details.map(d=>`<div class="ni-detail">${escapeHtml(d)}</div>`).join('')}
+          </div>`:''}
+      </div>`;
+  }).join('');
+}
+function getBettor(id){ return bettors.find(b=>b.id===id); }
+function getFight(id){ return fights.find(f=>f.id===id); }
+// propiedad de cuenta: un apostador es "tuyo" si su nombre coincide con tu usuario
+function ownsBettor(b){ return !!currentUser && !!b && b.name.trim().toLowerCase()===currentUser.username.trim().toLowerCase(); }
+function myBettors(){ return currentUser? bettors.filter(ownsBettor) : []; }
+function canActAs(b){ return isAdmin() || ownsBettor(b); }
+// asegura que apostadores guardados antes del banco tengan los campos nuevos
+function migrateBettors(){
+  bettors.forEach(b=>{
+    if(typeof b.loan==='undefined') b.loan=null;
+    if(typeof b.loanCooldownUntil==='undefined') b.loanCooldownUntil=0;
+  });
+}
+// registra automáticamente en el ranking cualquier peleador que ya aparezca en combates antiguos
+function migrateFighters(){
+  if(!Array.isArray(fighters)) fighters=[];
+  const have=new Set(fighters.map(n=>n.trim().toLowerCase()));
+  fights.forEach(f=>{
+    if(!f.card) f.card='main'; // sección por defecto para combates antiguos
+    [f.red,f.blue].forEach(n=>{
+      if(n && n.trim() && !have.has(n.trim().toLowerCase())){ fighters.push(n.trim()); have.add(n.trim().toLowerCase()); }
+    });
+  });
+}
+
+/* ---------- peleadores registrados (ranking) ---------- */
+function registerFighter(){
+  const inp=document.getElementById('newFighter');
+  const name=inp.value.trim();
+  if(!name){ toast('Escribe un nombre'); return; }
+  if(fighters.some(n=>n.trim().toLowerCase()===name.toLowerCase())){ toast('Ese peleador ya está registrado'); return; }
+  fighters.push(name);
+  inp.value='';
+  save(); render();
+  toast(name+' registrado en el ranking');
+}
+function removeFighter(name){
+  if(!requireAdmin()) return;
+  const key=name.trim().toLowerCase();
+  const inFight = fights.some(f=>f.red.trim().toLowerCase()===key || f.blue.trim().toLowerCase()===key);
+  if(inFight && !confirm(name+' aparece en combates. ¿Quitarlo del ranking de todas formas?')) return;
+  fighters=fighters.filter(n=>n.trim().toLowerCase()!==key);
+  if(champion && champion.trim().toLowerCase()===key) champion=null;
+  if(bmf && bmf.trim().toLowerCase()===key) bmf=null;
+  save(); render();
+}
+
+/* ---------- banco / préstamos ---------- */
+// importe a pagar ahora mismo por el préstamo activo (principal + interés progresivo)
+function loanPayoff(b){
+  if(!b || !b.loan) return null;
+  const elapsed = Math.max(0, fightClock - b.loan.takenAt);
+  const rate = Math.min(LOAN_RATE_CAP, LOAN_BASE_RATE + LOAN_RATE_STEP*elapsed);
+  const total = Math.round(b.loan.principal*(1+rate));
+  return {elapsed, rate, total, interest: total - b.loan.principal};
+}
+// ¿puede pedir préstamo este apostador?
+function canBorrow(b){
+  if(b.loan) return {ok:false, reason:'Ya tiene un préstamo activo (debe pagarlo primero)'};
+  if(fightClock < b.loanCooldownUntil) return {ok:false, reason:'En cooldown: faltan '+(b.loanCooldownUntil-fightClock)+' combate(s)'};
+  return {ok:true};
+}
+function takeLoan(){
+  const bid=+document.getElementById('loanBettor').value;
+  const amount=Math.floor(+document.getElementById('loanAmount').value);
+  const b=getBettor(bid);
+  if(!b){ toast('Selecciona un apostador'); return; }
+  if(!canActAs(b)){ toast('Solo puedes pedir préstamo con tu propia cuenta'); return; }
+  const c=canBorrow(b);
+  if(!c.ok){ toast(c.reason); return; }
+  if(!amount||amount<1){ toast('Cantidad inválida'); return; }
+  if(amount>LOAN_MAX){ toast('El máximo por préstamo es '+money(LOAN_MAX)); return; }
+  b.loan={principal:amount, takenAt:fightClock};
+  b.balance+=amount;
+  document.getElementById('loanAmount').value='';
+  save(); render();
+  toast(b.name+' pidió un préstamo de '+money(amount));
+}
+function repayLoan(id){
+  const b=getBettor(id);
+  if(!b||!b.loan) return;
+  if(!canActAs(b)){ toast('Solo puedes pagar tu propio préstamo'); return; }
+  const p=loanPayoff(b);
+  if(b.balance < p.total){ toast(b.name+' necesita '+money(p.total)+' para pagar (tiene '+money(b.balance)+')'); return; }
+  if(!confirm(b.name+' paga el préstamo:\nPrincipal '+money(b.loan.principal)+' + interés '+money(p.interest)+' ('+(p.rate*100).toFixed(0)+'%)\nTotal: '+money(p.total)+'\n¿Confirmar?')) return;
+  b.balance-=p.total;
+  b.loan=null;
+  b.loanCooldownUntil=fightClock+LOAN_COOLDOWN; // cooldown individual tras saldar
+  save(); render();
+  toast(b.name+' pagó '+money(p.total));
+}
+
+/* ---------- cálculo de pozos / cuotas ---------- */
+// pool de cada lado y total del combate
+function fightPools(f){
+  let red=0, blue=0;
+  f.bets.forEach(b=> b.side==='red'? red+=b.amount : blue+=b.amount);
+  return {red, blue, total:red+blue};
+}
+// cuota decimal estilo parimutuel: total / pozo_de_ese_lado
+// (cuánto recibes por cada $1 si gana ese lado; incluye tu apuesta devuelta)
+function decimalOdds(pool, total){
+  if(pool<=0 || total<=0) return null;
+  return total/pool;
+}
+// fuerza de un peleador según su récord (win-rate suavizado con Laplace; 0-0 => 0.5)
+function fighterStrength(name){
+  if(!name) return 0.5;
+  const key=name.trim().toLowerCase();
+  let w=0,l=0;
+  fights.forEach(f=>{
+    if(f.status!=='closed'||!f.winner) return;
+    const wk=(f.winner==='red'?f.red:f.blue).trim().toLowerCase();
+    const lk=(f.winner==='red'?f.blue:f.red).trim().toLowerCase();
+    if(wk===key) w++;
+    if(lk===key) l++;
+  });
+  return (w+1)/(w+l+2);
+}
+// cuotas inteligentes: mezcla el dinero apostado con el récord V-D de cada luchador
+function fightProbabilities(f){
+  const {red,blue,total}=fightPools(f);
+  const sRed=fighterStrength(f.red), sBlue=fighterStrength(f.blue);
+  const pRecRed = sRed/(sRed+sBlue);                 // probabilidad por récord
+  const pMoneyRed = total>0? red/total : 0.5;        // probabilidad por dinero (parimutuel)
+  const wMoney = total/(total+ODDS_K);               // peso del mercado: crece con el dinero
+  let pRed = wMoney*pMoneyRed + (1-wMoney)*pRecRed;
+  pRed = Math.min(0.97, Math.max(0.03, pRed));        // evita cuotas infinitas/extremas
+  const pBlue = 1-pRed;
+  return {red, blue, total, pRed, pBlue, oRed:1/pRed, oBlue:1/pBlue, wMoney};
+}
+
+/* ---------- apostadores ---------- */
+function ensureMyBettor(){
+  if(!currentUser) return;
+  const name=currentUser.username.trim();
+  if(!bettors.some(b=>b.name.toLowerCase()===name.toLowerCase())){
+    bettors.push({id:nextBettorId++, name, balance:START_BALANCE, loan:null, loanCooldownUntil:0});
+    save();
+  }
+}
+function addBettor(){
+  if(!requireAdmin()) return;
+  const inp=document.getElementById('bettorName');
+  const name=inp.value.trim();
+  if(!name){ toast('Escribe un nombre'); return; }
+  if(bettors.some(b=>b.name.toLowerCase()===name.toLowerCase())){ toast('Ese apostador ya existe'); return; }
+  bettors.push({id:nextBettorId++, name, balance:START_BALANCE, loan:null, loanCooldownUntil:0});
+  inp.value='';
+  save(); render();
+  toast(name+' añadido con '+money(START_BALANCE));
+}
+function removeBettor(id){
+  if(!requireAdmin()) return;
+  const b=getBettor(id);
+  const hasOpenBets = fights.some(f=>f.status==='open' && f.bets.some(x=>x.bettorId===id));
+  if(hasOpenBets && !confirm(b.name+' tiene apuestas en combates abiertos. ¿Eliminar de todas formas? (no se devuelve el dinero)')) return;
+  if(b.loan && !confirm(b.name+' tiene un préstamo sin pagar de '+money(b.loan.principal)+'. ¿Eliminar igualmente? (se cancela la deuda)')) return;
+  bettors=bettors.filter(x=>x.id!==id);
+  save(); render();
+}
+
+/* ---------- combates ---------- */
+function addFight(){
+  const red=document.getElementById('fighterRed').value.trim();
+  const blue=document.getElementById('fighterBlue').value.trim();
+  const name=document.getElementById('fightName').value.trim();
+  if(!red||!blue){ toast('Selecciona los dos peleadores'); return; }
+  if(red.trim().toLowerCase()===blue.trim().toLowerCase()){ toast('Elige dos peleadores distintos'); return; }
+  const card=document.getElementById('fightCard').value || 'main';
+  const nf={id:nextFightId++, name, red, blue, card, status:'open', winner:null, bets:[]};
+  fights.push(nf);
+  document.getElementById('fightName').value='';
+
+  // noticia del combate anunciado (+ cinturones en juego) con detalles ampliados
+  const rk=red.toLowerCase(), bk=blue.toLowerCase();
+  let extra='';
+  const champIn = champion && (champion.trim().toLowerCase()===rk||champion.trim().toLowerCase()===bk);
+  const bmfIn = bmf && (bmf.trim().toLowerCase()===rk||bmf.trim().toLowerCase()===bk);
+  if(champIn) extra+=' 🏆 El cinturón de campeón estará en juego.';
+  if(bmfIn) extra+=' 🥊 El cinturón BMF estará en juego.';
+  const pr=fightProbabilities(nf);
+  addNews('📢', `¡Combate firmado! ${red} se enfrentará a ${blue}${name?' — '+name:''}.`+extra, fightPreview(red, blue, nf, pr, champIn, bmfIn));
+
+  save(); render();
+  toast('Combate creado');
+}
+/* ---------- torneo de eliminación directa (bracket) ---------- */
+const TOURN_ROUND_NAMES = {16:['Octavos','Cuartos','Semifinal','Final'],8:['Cuartos','Semifinal','Final'],4:['Semifinal','Final'],2:['Final']};
+function refundOpenTournFights(){
+  fights.filter(f=>f.tourn && f.status==='open').forEach(f=>{
+    f.bets.forEach(b=>{ const bt=getBettor(b.bettorId); if(bt) bt.balance+=b.amount; });
+  });
+}
+function createTournament(){
+  if(!requireAdmin()) return;
+  const pool=fighters.slice();
+  if(pool.length<2){ toast('Registra al menos 2 peleadores'); return; }
+  if(tourn && !confirm('Ya hay un torneo en marcha. ¿Sortear uno nuevo? Se borrarán los combates del torneo actual (se devuelven las apuestas abiertas).')) return;
+  if(tourn){ refundOpenTournFights(); fights=fights.filter(f=>!f.tourn); }
+  // tamaño = mayor potencia de 2 que quepa (máx 16)
+  let size=2; while(size*2<=pool.length && size<16) size*=2;
+  // barajar (Fisher-Yates)
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const parts=pool.slice(0,size);
+  const roundNames=TOURN_ROUND_NAMES[size];
+  const rounds=[];
+  for(let r=0;r<roundNames.length;r++){
+    const arr=[]; const n=size/Math.pow(2,r+1);
+    for(let m=0;m<n;m++) arr.push({a:null,b:null,winner:null,fightId:null});
+    rounds.push(arr);
+  }
+  for(let m=0;m<rounds[0].length;m++){ rounds[0][m].a=parts[m*2]; rounds[0][m].b=parts[m*2+1]; }
+  tourn={size, rounds, roundNames, champion:null, done:false};
+  rounds[0].forEach((m,mi)=> createTournFight(0,mi));
+  addNews('🎲', `¡Sorteo del torneo! ${size} peleadores en el cuadro. Arranca la fase de ${roundNames[0]}.`,
+    ['🏟️ Formato: eliminación directa ('+roundNames.join(' → ')+')',
+     '👥 Participantes ('+size+'): '+parts.join(', '),
+     '📣 Se han creado los combates de '+roundNames[0]+'. ¡A apostar!']);
+  save(); render();
+  toast('Torneo sorteado: '+size+' peleadores');
+}
+function createTournFight(ri,mi){
+  const m=tourn.rounds[ri][mi];
+  if(!m.a||!m.b) return;
+  if(m.fightId && getFight(m.fightId)) return; // ya creado
+  const round=tourn.roundNames[ri];
+  const f={id:nextFightId++, name:'Torneo · '+round, red:m.a, blue:m.b, card:'tourn', status:'open', winner:null, bets:[], tourn:{ri,mi}};
+  fights.push(f);
+  m.fightId=f.id;
+  addNews('📣', `Fase clasificatoria — ${round}: ${m.a} vs ${m.b}.`,
+    ['🏟️ Ronda: '+round,
+     '🔴 '+m.a+' — récord '+recordStr(m.a),
+     '🔵 '+m.b+' — récord '+recordStr(m.b),
+     '💸 Combate apostable: el ganador avanza a la siguiente ronda.']);
+}
+function advanceTournament(f, winnerName){
+  if(!tourn || !f.tourn) return;
+  const {ri,mi}=f.tourn;
+  const m=tourn.rounds[ri] && tourn.rounds[ri][mi];
+  if(!m) return;
+  m.winner=winnerName;
+  if(ri+1<tourn.rounds.length){
+    const nm=tourn.rounds[ri+1][Math.floor(mi/2)];
+    if(mi%2===0) nm.a=winnerName; else nm.b=winnerName;
+    if(nm.a && nm.b) createTournFight(ri+1, Math.floor(mi/2));
+  } else {
+    tourn.champion=winnerName; tourn.done=true;
+    addNews('🏆', `¡${winnerName} se proclama CAMPEÓN del torneo!`,
+      ['🥇 Campeón del torneo: '+winnerName+' ('+recordStr(winnerName)+')',
+       '🏟️ Ganó todas las rondas hasta la Final.',
+       '📊 El cuadro determina la posición en el ranking.']);
+    // al terminar el torneo, plegar su sección por defecto para limpiar la vista
+    collapsed['tourn']=true;
+    try{ localStorage.setItem('ufcCollapsed', JSON.stringify(collapsed)); }catch(e){}
+  }
+}
+function deleteTournament(){
+  if(!requireAdmin()) return;
+  if(!tourn){ toast('No hay torneo'); return; }
+  if(!confirm('¿Borrar el torneo y sus combates? (se devuelven las apuestas abiertas)')) return;
+  refundOpenTournFights();
+  fights=fights.filter(f=>!f.tourn);
+  tourn=null;
+  save(); render();
+  toast('Torneo borrado');
+}
+// clave de posición en el ranking según el avance en el cuadro
+function tournKey(name){
+  if(!tourn) return null;
+  const k=name.trim().toLowerCase();
+  let participant=false, wins=0, elimRound=-1, active=true;
+  tourn.rounds.forEach((round,ri)=>{
+    round.forEach(m=>{
+      const ak=m.a&&m.a.trim().toLowerCase(), bk=m.b&&m.b.trim().toLowerCase();
+      if(ak===k || bk===k){
+        participant=true;
+        if(m.winner){
+          if(m.winner.trim().toLowerCase()===k) wins++;
+          else { elimRound=ri; active=false; }
+        }
+      }
+    });
+  });
+  if(!participant) return -1;
+  if(tourn.champion && tourn.champion.trim().toLowerCase()===k) return 100000;
+  if(active) return 50000+wins;   // sigue vivo en el torneo
+  return elimRound;               // eliminado: ronda más tardía = mejor posición
+}
+function renderBracket(){
+  const el=document.getElementById('bracketBox'); if(!el) return;
+  if(!tourn){ el.innerHTML='<p class="empty">No hay torneo. Pulsa “Sortear torneo” para generar el cuadro con los peleadores registrados.</p>'; return; }
+  let cols='';
+  tourn.rounds.forEach((round,ri)=>{
+    let matches='';
+    round.forEach(m=>{
+      const wk=m.winner? m.winner.trim().toLowerCase():null;
+      const slot=(nm)=>{
+        if(!nm) return `<div class="bk-slot empty"><span class="bk-nm">Por definir</span></div>`;
+        const win = wk && wk===nm.trim().toLowerCase();
+        const out = m.winner && !win;
+        return `<div class="bk-slot${win?' win':''}${out?' out':''}"><span class="bk-nm">${escapeHtml(nm)}</span></div>`;
+      };
+      matches+=`<div class="match"><div class="bk-match">${slot(m.a)}${slot(m.b)}</div></div>`;
+    });
+    cols+=`<div class="bk-col"><div class="bk-round">${tourn.roundNames[ri]}</div><div class="round">${matches}</div></div>`;
+  });
+  if(tourn.champion){
+    cols+=`<div class="bk-col bk-col-champ"><div class="bk-round">Campeón</div><div class="round"><div class="match"><div class="bk-champ">🏆 <span>${escapeHtml(tourn.champion)}</span></div></div></div></div>`;
+  }
+  el.innerHTML=`<div class="bracket">${cols}</div>`;
+}
+function toggleSection(key){
+  collapsed[key]=!collapsed[key];
+  try{ localStorage.setItem('ufcCollapsed', JSON.stringify(collapsed)); }catch(e){}
+  render();
+}
+function toggleFotn(id){
+  if(!requireAdmin()) return;
+  if(fotn===id){ fotn=null; toast('Combate de la Noche retirado'); }
+  else {
+    fotn=id;
+    const f=getFight(id);
+    if(f) addNews('⭐', `Combate de la Noche: ${f.red} vs ${f.blue}.`,
+      ['⭐ Premio a la mejor pelea de la velada',
+       '🥊 '+f.red+' ('+recordStr(f.red)+') vs '+f.blue+' ('+recordStr(f.blue)+')',
+       f.winner? ('🏆 Ganador: '+(f.winner==='red'?f.red:f.blue)) : '⏳ Combate aún sin resolver']);
+    toast('⭐ Marcado como Combate de la Noche');
+  }
+  save(); render();
+}
+function deleteFight(id){
+  if(!requireAdmin()) return;
+  const f=getFight(id);
+  if(fotn===id) fotn=null;
+  if(f.status==='open' && f.bets.length){
+    if(!confirm('Este combate tiene apuestas. Al borrarlo se DEVUELVE el dinero a los apostadores. ¿Continuar?')) return;
+    f.bets.forEach(b=>{ const bt=getBettor(b.bettorId); if(bt) bt.balance+=b.amount; });
+  } else {
+    if(!confirm('¿Borrar este combate?')) return;
+  }
+  fights=fights.filter(x=>x.id!==id);
+  save(); render();
+}
+
+/* ---------- apuestas ---------- */
+function refreshFighterOptions(){
+  const fid=+document.getElementById('betFight').value;
+  const f=getFight(fid);
+  const sel=document.getElementById('betFighter');
+  sel.innerHTML='';
+  if(!f) return;
+  sel.innerHTML=`<option value="red">🔴 ${f.red}</option><option value="blue">🔵 ${f.blue}</option>`;
+}
+function placeBet(){
+  const bid=+document.getElementById('betBettor').value;
+  const fid=+document.getElementById('betFight').value;
+  const side=document.getElementById('betFighter').value;
+  const amount=Math.floor(+document.getElementById('betAmount').value);
+  const bt=getBettor(bid), f=getFight(fid);
+  if(!bt){ toast('Selecciona un apostador'); return; }
+  if(!canActAs(bt)){ toast('Solo puedes apostar con tu propia cuenta'); return; }
+  if(!f){ toast('Selecciona un combate'); return; }
+  if(f.status!=='open'){ toast('El combate está cerrado'); return; }
+  if(!amount||amount<1){ toast('Cantidad inválida'); return; }
+  if(amount>bt.balance){ toast(bt.name+' no tiene saldo suficiente ('+money(bt.balance)+')'); return; }
+  bt.balance-=amount;
+  f.bets.push({bettorId:bid, side, amount});
+  document.getElementById('betAmount').value='';
+  save(); render();
+  toast(bt.name+' apostó '+money(amount)+' a '+(side==='red'?f.red:f.blue));
+}
+
+/* ---------- resolver combate ---------- */
+function declareWinner(fid, side){
+  const f=getFight(fid);
+  if(!requireAdmin()) return;
+  if(f.status==='closed'){ toast('Ya resuelto'); return; }
+  const {red,blue,total}=fightPools(f);
+  const winPool = side==='red'?red:blue;
+  const winnerName = side==='red'?f.red:f.blue;
+  if(!confirm('Ganador: '+winnerName+'. ¿Confirmar y repartir el pozo?')) return;
+
+  // cuota inteligente del ganador (calculada ANTES de cerrar, para no contar este combate)
+  const probs = fightProbabilities(f);
+  const oddsWin = side==='red'? probs.oRed : probs.oBlue;
+  f.payoutOdds = winPool>0? oddsWin : 0; // se guarda para mostrar pagos y revertir si se reabre
+
+  if(winPool<=0){
+    // nadie apostó al ganador -> el dinero del pozo se queda "en la casa" (se pierde)
+    if(total>0) toast('Nadie acertó: el pozo de '+money(total)+' se pierde');
+  } else {
+    // cada ganador cobra su apuesta × cuota inteligente; la casa cubre la diferencia con el pozo
+    f.bets.filter(b=>b.side===side).forEach(b=>{
+      const bt=getBettor(b.bettorId);
+      if(bt) bt.balance += b.amount*oddsWin;
+    });
+  }
+  f.status='closed'; f.winner=side;
+  fightClock++; // un combate más resuelto: afecta intereses y cooldowns
+
+  // transferencia automática de cinturones: si el perdedor era campeón, el ganador se lo queda
+  const loserName = side==='red'? f.blue : f.red;
+  const loserKey = loserName.trim().toLowerCase();
+  let beltMsg='';
+  // crónica posterior al combate
+  const nBets=f.bets.length, nWin=f.bets.filter(b=>b.side===side).length;
+  const winnerProb = side==='red'? probs.pRed : probs.pBlue;
+  const roundName = (f.tourn && tourn)? tourn.roundNames[f.tourn.ri] : '';
+  addNews('🥊', `${winnerName} derrota a ${loserName}${f.name?' en '+f.name:''}.`,
+    fightReport(winnerName, loserName, f, winnerProb, total, nBets, nWin, oddsWin, !!f.tourn, roundName));
+  if(champion && champion.trim().toLowerCase()===loserKey){
+    champion=winnerName; beltMsg+=' 🏆 ¡Nuevo campeón!';
+    addNews('👑', `¡${winnerName} destrona a ${loserName} y se proclama nuevo campeón de la UFC!`,
+      ['📰 '+pick([
+          `Cambio de era en la división. ${winnerName} ha arrebatado el cinturón a ${loserName} y se sienta en el trono de la UFC.`,
+          `Se acabó el reinado de ${loserName}. ${winnerName} es el nuevo campeón y nadie discute su corona.`
+        ]),
+       `👑 ${winnerName} llega al título con un récord de ${recordStr(winnerName)}. ${loserName} (${recordStr(loserName)}) pierde el cinturón que tanto le costó conseguir.`,
+       '🎙️ '+pick([
+          `"Llevo toda la vida soñando con este cinturón, y no lo voy a soltar", proclamó el nuevo campeón.`,
+          `"Quiero la revancha de inmediato", exigió un destrozado ${loserName}.`,
+          `El estadio entero coreó el nombre de ${winnerName} mientras le colocaban el oro en la cintura.`
+        ])]);
+  }
+  if(bmf && bmf.trim().toLowerCase()===loserKey){
+    bmf=winnerName; beltMsg+=' 🥊 ¡Nuevo BMF!';
+    addNews('🔥', `¡${winnerName} le arrebata el cinturón BMF a ${loserName}!`,
+      ['📰 '+pick([
+          `El cinturón del más cabrón cambia de dueño: ${winnerName} le ha quitado el BMF a ${loserName} a base de huevos.`,
+          `${winnerName} se gana el respeto de todos y conquista el BMF tras superar a ${loserName}.`
+        ]),
+       `🥊 ${winnerName} (${recordStr(winnerName)}) es el nuevo BMF. ${loserName} (${recordStr(loserName)}) entrega el cinturón más temido.`,
+       '🎙️ '+pick([
+          `"Soy el más duro de todos, que nadie lo dude", rugió ${winnerName}.`,
+          `"Esto es lo que significa ser un BMF", celebró ${winnerName} ante la grada.`
+        ])]);
+  }
+
+  if(f.tourn) advanceTournament(f, winnerName); // avance del cuadro
+
+  save(); render();
+  toast('¡'+winnerName+' gana! Pozo repartido.'+beltMsg);
+}
+function reopenFight(fid){
+  if(!requireAdmin()) return;
+  const f=getFight(fid);
+  if(!confirm('Reabrir combate: se revertirá el reparto y volverán los saldos antes del resultado. ¿Continuar?')) return;
+  // revertir: deshacer pagos del ganador con la MISMA cuota usada al cerrar
+  const {red,blue,total}=fightPools(f);
+  const winPool = f.winner==='red'?red:blue;
+  const payOdds = (typeof f.payoutOdds==='number')? f.payoutOdds : (winPool>0? total/winPool:0);
+  if(winPool>0){
+    f.bets.filter(b=>b.side===f.winner).forEach(b=>{
+      const bt=getBettor(b.bettorId);
+      if(bt) bt.balance-=b.amount*payOdds;
+    });
+  }
+  delete f.payoutOdds;
+  f.status='open'; f.winner=null;
+  if(fightClock>0) fightClock--; // deja de contar como combate resuelto
+  save(); render();
+}
+
+/* ---------- render ---------- */
+/* ---------- ranking de apuestas (apostadores por beneficio neto) ---------- */
+function signedMoney(n){
+  const s = n>0?'+':(n<0?'-':'');
+  return s+'$'+(Math.round(Math.abs(n)*100)/100).toLocaleString('es-ES');
+}
+function bettorStats(id){
+  let wagered=0, lost=0, net=0;
+  fights.forEach(f=>{
+    const {red,blue,total}=fightPools(f);
+    f.bets.forEach(b=>{
+      if(b.bettorId!==id) return;
+      wagered+=b.amount;
+      if(f.status==='closed' && f.winner){
+        if(b.side===f.winner){
+          const wp=f.winner==='red'?red:blue;
+          const payOdds = (typeof f.payoutOdds==='number')? f.payoutOdds : (wp>0? total/wp:0);
+          net += b.amount*payOdds - b.amount; // beneficio neto de la apuesta ganada
+        } else {
+          lost += b.amount;
+          net  -= b.amount;                   // pierde lo apostado
+        }
+      }
+    });
+  });
+  return {wagered, lost, net};
+}
+function renderBetRanking(){
+  const el=document.getElementById('betRankingList'); if(!el) return;
+  if(!bettors.length){ el.innerHTML='<p class="empty" style="padding:12px">Sin apostadores todavía.</p>'; return; }
+  const list=bettors.map(b=>{ const s=bettorStats(b.id); return {name:b.name, wagered:s.wagered, lost:s.lost, net:s.net}; })
+    .sort((a,b)=> b.net-a.net || b.wagered-a.wagered || a.name.localeCompare(b.name));
+  el.innerHTML=list.map((b,i)=>{
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    return `<div class="brank-row">
+        <span class="pos">${medal}</span>
+        <div class="brank-body">
+          <div class="brank-name">${escapeHtml(b.name)}</div>
+          <div class="brank-sub">Apostado <b>${money(b.wagered)}</b> · Perdido <span class="brank-lost">${money(b.lost)}</span></div>
+        </div>
+        <span class="brank-bal ${b.net<0?'neg':''}">${signedMoney(b.net)}</span>
+      </div>`;
+  }).join('');
+}
+function render(){
+  renderRanking();
+  renderBetRanking();
+  renderBracket();
+  renderNews();
+  renderUsers();
+  renderCountdown();
+  // apostadores
+  const bl=document.getElementById('bettorsList');
+  bl.innerHTML = bettors.length? '' : '<p class="empty">Sin apostadores todavía</p>';
+  bettors.forEach(b=>{
+    let loanLine='';
+    if(b.loan){
+      const p=loanPayoff(b);
+      loanLine=`<div style="font-size:.74rem; color:var(--red); margin-top:6px; display:flex; justify-content:space-between; align-items:center; gap:8px">
+          <span>💸 Debe <b>${money(p.total)}</b> · interés ${(p.rate*100).toFixed(0)}% (${p.elapsed} combate/s)</span>
+          ${canActAs(b)?`<button class="btn-mini" style="border-color:var(--green); color:var(--green)" onclick="repayLoan(${b.id})">Pagar</button>`:''}
+        </div>`;
+    } else if(fightClock < b.loanCooldownUntil){
+      loanLine=`<div style="font-size:.72rem; color:var(--muted); margin-top:6px">⏳ Cooldown de préstamo: faltan ${b.loanCooldownUntil-fightClock} combate(s)</div>`;
+    }
+    bl.innerHTML += `<div class="bettor-pill" style="flex-direction:column; align-items:stretch">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <b>${escapeHtml(b.name)}</b>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="balance ${b.balance<=0?'neg':''}">${money(b.balance)}</span>
+            ${isAdmin()?`<button class="btn-del" onclick="removeBettor(${b.id})">✕</button>`:''}
+          </div>
+        </div>
+        ${loanLine}
+      </div>`;
+  });
+
+  // selects de apostador: admin ve todos con desplegable; usuario ve solo su nombre sin desplegable
+  const myB = myBettors()[0] || null;
+  const selB=document.getElementById('betBettor');
+  const dispB=document.getElementById('betBettorDisplay');
+  const selL=document.getElementById('loanBettor');
+  const dispL=document.getElementById('loanBettorDisplay');
+  if(isAdmin()){
+    selB.style.display=''; if(dispB) dispB.style.display='none';
+    selB.innerHTML = bettors.length
+      ? bettors.map(b=>`<option value="${b.id}">${escapeHtml(b.name)} — ${money(b.balance)}</option>`).join('')
+      : '<option value="">— no hay apostadores —</option>';
+    selL.style.display=''; if(dispL) dispL.style.display='none';
+    selL.innerHTML = bettors.length
+      ? bettors.map(b=>`<option value="${b.id}">${escapeHtml(b.name)} — ${money(b.balance)}${b.loan?' (con deuda)':''}</option>`).join('')
+      : '<option value="">— no hay apostadores —</option>';
+  } else {
+    selB.style.display='none';
+    if(myB){
+      selB.innerHTML=`<option value="${myB.id}"></option>`; selB.value=myB.id;
+      if(dispB){ dispB.textContent=myB.name+' — '+money(myB.balance); dispB.style.display=''; }
+    } else {
+      selB.innerHTML='<option value="">—</option>';
+      if(dispB){ dispB.textContent='Sin cuenta de apostador'; dispB.style.display=''; }
+    }
+    selL.style.display='none';
+    if(myB){
+      selL.innerHTML=`<option value="${myB.id}"></option>`; selL.value=myB.id;
+      if(dispL){ dispL.textContent=myB.name+' — '+money(myB.balance)+(myB.loan?' · con deuda':''); dispL.style.display=''; }
+    } else {
+      selL.innerHTML='<option value="">—</option>';
+      if(dispL){ dispL.textContent='Sin cuenta de apostador'; dispL.style.display=''; }
+    }
+  }
+  const openFights = fights.filter(f=>f.status==='open');
+  const selF=document.getElementById('betFight');
+  const prev = selF.value;
+  selF.innerHTML = openFights.map(f=>`<option value="${f.id}">${escapeHtml(fightLabel(f))}</option>`).join('');
+  if(openFights.some(f=>''+f.id===prev)) selF.value=prev;
+  refreshFighterOptions();
+
+  // desplegables de peleadores (crear combate) a partir de los registrados en el ranking
+  const fOpts='<option value="">— peleador —</option>'+allFighterNames().map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+  ['fighterRed','fighterBlue'].forEach(id=>{
+    const s=document.getElementById(id); if(!s) return;
+    const prevV=s.value; s.innerHTML=fOpts;
+    if([...s.options].some(o=>o.value===prevV)) s.value=prevV;
+  });
+
+  // combates agrupados por sección del cartel (estelar arriba)
+  const fl=document.getElementById('fightsList');
+  if(!fights.length){
+    fl.innerHTML='<p class="empty">No hay combates. Crea uno arriba.</p>';
+  } else {
+    const sections=[['event','🌟 Combate Estelar — Main Event'],['main','🥊 Tarjeta Principal'],['prelim','📋 Preliminares'],['tourn','🏆 Torneo — Eliminatoria']];
+    let html='';
+    sections.forEach(([key,label])=>{
+      const group=fights.filter(f=>(f.card||'main')===key)
+                        .sort((a,b)=> (a.status===b.status)?0 : a.status==='open'?-1:1);
+      if(!group.length) return;
+      const col=!!collapsed[key];
+      html+=`<div class="card-section">
+          <h3 class="card-section-title" onclick="toggleSection('${key}')">
+            <span class="cs-chevron">${col?'▶':'▼'}</span>${label}
+            <span class="cs-count">${group.length}</span>
+          </h3>
+          <div class="cs-body"${col?' style="display:none"':''}>`;
+      group.forEach(f=> html+=renderFight(f));
+      html+='</div></div>';
+    });
+    fl.innerHTML=html;
+  }
+}
+
+/* ---------- ranking único estilo UFC ---------- */
+// récord (V/D) de cada peleador REGISTRADO, a partir de los combates resueltos
+function computeRanking(){
+  const rec={};
+  fighters.forEach(n=>{ rec[n.trim().toLowerCase()]={name:n.trim(),w:0,l:0}; });
+  fights.forEach(f=>{
+    if(f.status!=='closed' || !f.winner) return;
+    const winKey=(f.winner==='red'?f.red:f.blue).trim().toLowerCase();
+    const loseKey=(f.winner==='red'?f.blue:f.red).trim().toLowerCase();
+    if(rec[winKey]) rec[winKey].w++;
+    if(rec[loseKey]) rec[loseKey].l++;
+  });
+  return Object.values(rec).sort((a,b)=>{
+    if(tourn){ const ka=tournKey(a.name), kb=tournKey(b.name); if(ka!==kb) return kb-ka; }
+    return b.w-a.w || a.l-b.l || (b.w/(b.w+b.l||1))-(a.w/(a.w+a.l||1)) || a.name.localeCompare(b.name);
+  });
+}
+function allFighterNames(){ return fighters.map(n=>n.trim()).sort((a,b)=>a.localeCompare(b)); }
+function removeFighterAt(i){ if(fighters[i]) removeFighter(fighters[i]); }
+function setChampion(){
+  if(!requireAdmin()) return;
+  const v=document.getElementById('championSelect').value;
+  if(!v){ toast('Elige un peleador'); return; }
+  champion=v;
+  addNews('👑', `${v} es coronado campeón de la UFC.`, ['👑 Nuevo campeón: '+v+' ('+recordStr(v)+')','📌 Título asignado por la organización.']);
+  save(); render();
+  toast('🏆 '+v+' es el nuevo campeón de la UFC');
+}
+function vacateBelt(){
+  if(!requireAdmin()) return;
+  if(!champion){ toast('El título ya está vacante'); return; }
+  if(!confirm('¿Dejar el cinturón vacante?')) return;
+  addNews('🏳️', `El cinturón de campeón queda vacante.`);
+  champion=null;
+  save(); render();
+  toast('Título vacante');
+}
+function setBmf(){
+  if(!requireAdmin()) return;
+  const v=document.getElementById('bmfSelect').value;
+  if(!v){ toast('Elige un peleador'); return; }
+  bmf=v;
+  addNews('🥊', `${v} recibe el cinturón BMF.`, ['🥊 Nuevo BMF: '+v+' ('+recordStr(v)+')','📌 Cinturón asignado por la organización.']);
+  save(); render();
+  toast('🥊 '+v+' gana el cinturón BMF');
+}
+function vacateBmf(){
+  if(!requireAdmin()) return;
+  if(!bmf){ toast('El BMF ya está vacante'); return; }
+  if(!confirm('¿Dejar el cinturón BMF vacante?')) return;
+  addNews('🏳️', `El cinturón BMF queda vacante.`);
+  bmf=null;
+  save(); render();
+  toast('BMF vacante');
+}
+function fillBeltSelect(selId, holder){
+  const sel=document.getElementById(selId); if(!sel) return;
+  const hk = holder? holder.trim().toLowerCase():null;
+  sel.innerHTML='<option value="">— elegir peleador —</option>'+
+    allFighterNames().map(n=>`<option value="${escapeHtml(n)}"${hk===n.toLowerCase()?' selected':''}>${escapeHtml(n)}</option>`).join('');
+}
+// distintivos de cinturones (campeón y/o BMF) junto al nombre
+function fighterBadges(name){
+  const k=name.trim().toLowerCase();
+  let s='';
+  if(champion && champion.trim().toLowerCase()===k) s+='<span class="belt-tag">Campeón</span>';
+  if(bmf && bmf.trim().toLowerCase()===k) s+='<span class="belt-tag bmf">BMF</span>';
+  return s;
+}
+function rankRowHtml(p,posCell,extraClass){
+  const total=p.w+p.l, pct=total?Math.round(p.w/total*100):0;
+  const idx=fighters.findIndex(n=>n.trim().toLowerCase()===p.name.trim().toLowerCase());
+  return `<tr class="${extraClass||''}">
+      <td class="pos">${posCell}</td>
+      <td><span class="rank-name">${escapeHtml(p.name)}</span>${fighterBadges(p.name)}
+          ${isAdmin()?`<button class="x-fighter" title="Quitar del ranking" onclick="removeFighterAt(${idx})">✕</button>`:''}</td>
+      <td class="c"><span class="rec-w">${p.w}</span>-<span class="rec-l">${p.l}</span></td>
+      <td class="c"><span class="rank-pct">${pct}%</span></td>
+    </tr>`;
+}
+function renderRanking(){
+  fillBeltSelect('championSelect', champion);
+  fillBeltSelect('bmfSelect', bmf);
+  const el=document.getElementById('rankingList');
+  if(!el) return;
+  if(!fighters.length){
+    el.innerHTML='<p class="empty" style="padding:14px">Registra peleadores para empezar el ranking.</p>';
+    return;
+  }
+  const r=computeRanking();
+  const champKey = champion? champion.trim().toLowerCase():null;
+  let champEntry=null, contenders=r;
+  if(champKey){
+    champEntry = r.find(p=>p.name.trim().toLowerCase()===champKey);
+    contenders = r.filter(p=>p.name.trim().toLowerCase()!==champKey);
+  }
+  let rows='';
+  if(champEntry) rows+=rankRowHtml(champEntry,'🏆','champ');
+  contenders.forEach((p,i)=>{
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+    rows+=rankRowHtml(p,medal,'');
+  });
+  el.innerHTML=`<table class="rank-table">
+      <thead><tr><th class="c">#</th><th>Peleador</th><th class="c">V-D</th><th class="c">% Vict</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`
+    + (champion? '' : '<p class="hint" style="margin-top:10px">🏅 Cinturón de campeón vacante</p>');
+}
+
+function fightLabel(f){
+  return (f.name? f.name+': ':'') + f.red+' vs '+f.blue;
+}
+
+function renderFight(f){
+  const {red,blue,total}=fightPools(f);
+  const pr=fightProbabilities(f);
+  const oRed=pr.oRed, oBlue=pr.oBlue;
+  const pRed = pr.pRed*100, pBlue = pr.pBlue*100;
+  const recOf=(name)=>{ let w=0,l=0; fights.forEach(x=>{ if(x.status!=='closed'||!x.winner)return; const wk=(x.winner==='red'?x.red:x.blue).trim().toLowerCase(); const lk=(x.winner==='red'?x.blue:x.red).trim().toLowerCase(); const k=name.trim().toLowerCase(); if(wk===k)w++; if(lk===k)l++; }); return w+'-'+l; };
+
+  const cornerHtml=(side)=>{
+    const name = side==='red'?f.red:f.blue;
+    const pool = side==='red'?red:blue;
+    const odds = side==='red'?oRed:oBlue;
+    const pct  = side==='red'?pRed:pBlue;
+    const win  = f.winner===side?'win':'';
+    return `<div class="corner ${side} ${win}">
+        <div class="cname">${side==='red'?'🔴':'🔵'} ${escapeHtml(name)} ${f.winner===side?'🏆':''}</div>
+        <div class="odds ${side}">${odds.toFixed(2)}x</div>
+        <div class="stat">Apostado: <b>${money(pool)}</b> · Récord: <b>${recOf(name)}</b></div>
+        <div class="stat">Beneficio: <b>+${((odds-1)*100).toFixed(0)}%</b></div>
+        <div class="stat">Probabilidad: <b>${pct.toFixed(1)}%</b></div>
+      </div>`;
+  };
+
+  const betsDetail = f.bets.length? f.bets.map(b=>{
+    const bt=getBettor(b.bettorId);
+    const name=bt? bt.name : '??';
+    const fname = b.side==='red'?f.red:f.blue;
+    let payTxt='';
+    if(f.status==='open'){
+      const odds = b.side==='red'?oRed:oBlue;
+      payTxt = `posible: <span class="payout">${money(b.amount*odds)}</span>`;
+    } else {
+      if(b.side===f.winner){
+        const wp=f.winner==='red'?red:blue;
+        const payOdds = (typeof f.payoutOdds==='number')? f.payoutOdds : (wp>0? total/wp:0);
+        payTxt=`ganó <span class="payout">${money(b.amount*payOdds)}</span>`;
+      } else payTxt=`<span style="color:var(--red)">perdió</span>`;
+    }
+    return `<div class="bet-line"><span>${escapeHtml(name)} → ${escapeHtml(fname)} · ${money(b.amount)}</span><span>${payTxt}</span></div>`;
+  }).join('') : '<div class="bet-line"><span>Sin apuestas aún</span><span></span></div>';
+
+  const fotnBtn=`<button class="btn-mini ${fotn===f.id?'fotn-on':''}" onclick="toggleFotn(${f.id})">⭐ Combate de la Noche</button>`;
+  let controls='';
+  if(isAdmin()){
+    if(f.status==='open'){
+      controls=`<div class="winrow">
+          <button class="btn-win" onclick="declareWinner(${f.id},'red')">🏆 Gana ${escapeHtml(f.red)}</button>
+          <button class="btn-win" onclick="declareWinner(${f.id},'blue')">🏆 Gana ${escapeHtml(f.blue)}</button>
+          ${fotnBtn}
+          <button class="btn-del" style="width:auto" onclick="deleteFight(${f.id})">Borrar</button>
+        </div>`;
+    } else {
+      controls=`<div class="winrow">
+          <button class="btn-mini" onclick="reopenFight(${f.id})">↺ Reabrir / corregir</button>
+          ${fotnBtn}
+          <button class="btn-del" style="width:auto" onclick="deleteFight(${f.id})">Borrar</button>
+        </div>`;
+    }
+  }
+
+  return `<div class="fight ${f.status==='closed'?'closed':''} ${fotn===f.id?'is-fotn':''}">
+      <div class="fight-head">
+        <div class="fight-title">${f.name?escapeHtml(f.name)+' · ':''}${escapeHtml(f.red)}<span class="vs">vs</span>${escapeHtml(f.blue)}</div>
+        <div style="display:flex; gap:6px; align-items:center">
+          ${fotn===f.id?'<span class="tag fotn-tag">⭐ Combate de la Noche</span>':''}
+          <span class="tag ${f.status}">${f.status==='open'?'Abierto':'Cerrado'}</span>
+        </div>
+      </div>
+      <div class="corners">${cornerHtml('red')}${cornerHtml('blue')}</div>
+      <div class="barwrap"><div class="br" style="width:${pRed}%"></div><div class="bb" style="width:${pBlue}%"></div></div>
+      <div class="stat" style="text-align:center">Pozo total: <b>${money(total)}</b> · ${f.bets.length} apuesta(s)</div>
+      <div class="bets-list">${betsDetail}</div>
+      ${controls}
+    </div>`;
+}
+
+function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- exportar / importar copia (respaldo fiable) ---------- */
+function exportData(){
+  const blob=new Blob([JSON.stringify({bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,news,fotn,tourn,users},null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='apuestas-ufc.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Copia exportada');
+}
+function importData(input){
+  if(!requireAdmin()){ input.value=''; return; }
+  const file=input.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      bettors=d.bettors||[]; fights=d.fights||[];
+      nextBettorId=d.nextBettorId||1; nextFightId=d.nextFightId||1; fightClock=d.fightClock||0; champion=d.champion||null; bmf=d.bmf||null; fighters=d.fighters||[]; news=d.news||[]; fotn=d.fotn||null; tourn=d.tourn||null;
+      users=(d.users&&d.users.length)? d.users : users; // no vaciar cuentas si el backup no las trae
+      migrateBettors(); migrateFighters();
+      save(); render(); toast('Copia importada');
+    }catch(e){ toast('Archivo no válido'); }
+  };
+  r.readAsText(file);
+  input.value='';
+}
+
+/* ---------- cuenta atrás ---------- */
+let _cdTimer = null;
+
+function setNextEvent(){
+  if(!requireAdmin()) return;
+  const label=(document.getElementById('eventLabel').value||'').trim()||'Próximo Combate';
+  const dtVal=document.getElementById('eventDateTime').value;
+  if(!dtVal){ toast('Selecciona una fecha y hora'); return; }
+  const ts=new Date(dtVal).getTime();
+  if(isNaN(ts)||ts<=Date.now()){ toast('La fecha debe ser en el futuro'); return; }
+  nextEvent={label,ts};
+  save(); renderCountdown(); render();
+  toast('⏱ Cuenta atrás activada: '+label);
+}
+function clearNextEvent(){
+  if(!requireAdmin()) return;
+  nextEvent=null;
+  save(); renderCountdown(); render();
+  toast('Cuenta atrás eliminada');
+}
+function renderCountdown(){
+  const w=document.getElementById('countdownWidget'); if(!w) return;
+  if(!nextEvent||nextEvent.ts<=Date.now()){
+    w.style.display='none'; clearInterval(_cdTimer); _cdTimer=null;
+    const inf=document.getElementById('eventCurrentInfo'); if(inf) inf.innerHTML='Sin cuenta atrás activa.';
+    return;
+  }
+  w.style.display='';
+  const nm=document.getElementById('cdEventName'); if(nm) nm.textContent=nextEvent.label;
+  const inf=document.getElementById('eventCurrentInfo');
+  if(inf) inf.innerHTML='Activo: <b>'+escapeHtml(nextEvent.label)+'</b><br>'+new Date(nextEvent.ts).toLocaleString('es-ES',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(!_cdTimer) _cdTimer=setInterval(_tickCd,1000);
+  _tickCd();
+}
+function _tickCd(){
+  if(!nextEvent){ clearInterval(_cdTimer); _cdTimer=null; return; }
+  const diff=Math.max(0,nextEvent.ts-Date.now());
+  const pad=n=>String(n).padStart(2,'0');
+  const q=id=>{const e=document.getElementById(id); if(e) e.textContent=pad(0); return e;};
+  const set=(id,v)=>{const e=document.getElementById(id); if(e) e.textContent=pad(v);};
+  set('cdDays',  Math.floor(diff/86400000));
+  set('cdHours', Math.floor(diff/3600000)%24);
+  set('cdMins',  Math.floor(diff/60000)%60);
+  set('cdSecs',  Math.floor(diff/1000)%60);
+  if(diff===0){ clearInterval(_cdTimer); _cdTimer=null; const w=document.getElementById('countdownWidget'); if(w) w.style.display='none'; toast('🔔 ¡Es la hora del evento!'); }
+}
+
+
+/* ---------- init ---------- */
+// comprueba si localStorage funciona en este contexto
+try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+catch(e){ storageOK=false; }
+try{ const c=JSON.parse(localStorage.getItem('ufcCollapsed')); if(c) collapsed=c; }catch(e){}
+
+if(USE_CLOUD){
+  // MODO ONLINE: datos y sesión en la nube
+  console.log('UFC Betting · modo ONLINE (Firebase)');
+  cloudSubscribe();
+  fbAuth.onAuthStateChanged(()=>{ resolveCurrentUser(); applyAuthUI(); render(); });
+  applyAuthUI();
+  render();
+}else{
+  // MODO LOCAL (sin Firebase configurado)
+  load();
+  if(!storageOK) showStorageWarning();
+  try{
+    const cu=localStorage.getItem('ufcCurrentUser');
+    if(cu){ const u=users.find(x=>x.username.toLowerCase()===cu.toLowerCase()); if(u) currentUser=u; }
+  }catch(e){}
+  applyAuthUI();
+  render();
+}
+</script>
+</body>
+</html>
