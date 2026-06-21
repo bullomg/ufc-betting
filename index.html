@@ -290,6 +290,19 @@
   .b5col:not(:last-child) .b5match::after{content:''; position:absolute; left:100%; top:50%; width:23px; height:2px; background:var(--border2); transform:translateY(-50%)}
   .b5col:not(:first-child) .b5match::before{content:''; position:absolute; right:100%; top:50%; width:23px; height:2px; background:var(--border2); transform:translateY(-50%)}
 
+  /* ---------- Editor manual del cuadro (admin) ---------- */
+  .ted{max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:10px}
+  .ted-head{font-family:var(--display); text-transform:uppercase; letter-spacing:2px; font-size:.9rem; color:var(--gold2); text-align:center; margin-bottom:2px}
+  .ted-row{background:linear-gradient(180deg,#1c1c25,#121219); border:1px solid var(--border2); border-radius:11px; padding:10px 12px; box-shadow:0 10px 24px -16px #000}
+  .ted-label{font-family:var(--display); text-transform:uppercase; letter-spacing:1.5px; font-size:.72rem; color:var(--gold2); margin-bottom:8px}
+  .ted-fields{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .ted-sel{flex:1; min-width:120px; background:#0e0e14; color:var(--txt); border:1px solid var(--border2); border-radius:8px; padding:7px 9px; font-size:.85rem; font-family:inherit}
+  .ted-sel:focus{outline:none; border-color:var(--gold2)}
+  .ted-win{flex:1 0 100%; border-color:rgba(212,175,55,.4); color:var(--gold2); font-weight:700}
+  .ted-vs{color:var(--muted); font-size:.7rem; text-transform:uppercase; letter-spacing:1px}
+  .ted-actions{display:flex; gap:10px; justify-content:center; margin-top:6px}
+  .ted-note{font-size:.7rem; color:var(--muted); text-align:center; line-height:1.45; margin:2px 0 0}
+
   /* ---------- Tablón de noticias ---------- */
   .news-board{
     margin:30px auto 0; max-width:920px;
@@ -668,6 +681,7 @@
       <h2 class="section-title">🏆 Cuadro del Torneo</h2>
       <div style="display:flex; gap:8px" class="admin-only">
         <button class="btn-mini" onclick="createTournament()">🎲 Sortear torneo</button>
+        <button class="btn-mini" onclick="toggleTournEdit()">✏️ Editar</button>
         <button class="btn-mini" onclick="deleteTournament()">Borrar</button>
       </div>
     </div>
@@ -730,6 +744,8 @@ let nextEvent = null; // cuenta atrás {label, ts} o null
 let currentUser = null; // sesión actual
 let authMode = 'login'; // 'login' | 'register'
 let collapsed = {};  // secciones plegadas de la cartelera {clave:true}
+let tournEdit = false; // modo edición manual del cuadro (admin)
+let tournDraft = null; // borrador editable del cuadro mientras se edita
 
 /* ===================== FIREBASE (modo online opcional) =====================
    Pega aquí la config de tu proyecto Firebase (Configuración del proyecto > Tus apps > Web).
@@ -1557,6 +1573,7 @@ function tournKey(name){
 function renderBracket(){
   const el=document.getElementById('bracketBox'); if(!el) return;
   if(!tourn){ el.innerHTML=`<p class='empty'>No hay torneo. Pulsa “Sortear torneo” para generar el cuadro con los peleadores registrados.</p>`; return; }
+  if(tournEdit && tournDraft){ renderTournEditor(); return; }
   if(tourn.format==='custom5'){ renderBracket5(); return; }
   let cols='';
   tourn.rounds.forEach((round,ri)=>{
@@ -1619,6 +1636,97 @@ function renderBracket5(){
       <div class='b5row b5s b5center'><div class='b5match'>${champ}</div></div>
     </div>
   </div>`;
+}
+/* ---------- Edición manual del cuadro (solo admin) ---------- */
+function toggleTournEdit(){
+  if(!requireAdmin()) return;
+  if(!tourn){ toast('No hay torneo que editar'); return; }
+  if(tourn.format!=='custom5'){ toast('La edición manual está disponible para el cuadro de 5 jugadores'); return; }
+  tournEdit=!tournEdit;
+  tournDraft = tournEdit ? tourn.matches.map(m=>({label:m.label, a:m.a||'', b:m.b||'', winner:m.winner||''})) : null;
+  renderBracket();
+}
+function tournDraftSet(i,field,val){
+  if(!tournDraft||!tournDraft[i]) return;
+  const m=tournDraft[i];
+  if(field===0){ m.a=val; if(m.winner&&m.winner!==m.a&&m.winner!==m.b) m.winner=''; renderTournEditor(); }
+  else if(field===1){ m.b=val; if(m.winner&&m.winner!==m.a&&m.winner!==m.b) m.winner=''; renderTournEditor(); }
+  else { m.winner=val; }
+}
+function cancelTournEdit(){ tournEdit=false; tournDraft=null; renderBracket(); }
+function renderTournEditor(){
+  const el=document.getElementById('bracketBox'); if(!el||!tournDraft) return;
+  const fopts=(sel)=>{
+    let o=`<option value=''>&mdash; Por definir &mdash;</option>`;
+    fighters.forEach(f=>{ o+=`<option value='${escapeHtml(f)}'${f===sel?' selected':''}>${escapeHtml(f)}</option>`; });
+    return o;
+  };
+  let rows='';
+  tournDraft.forEach((m,i)=>{
+    let wOpts=`<option value=''${m.winner?'':' selected'}>&mdash; Sin resultado &mdash;</option>`;
+    if(m.a) wOpts+=`<option value='${escapeHtml(m.a)}'${m.winner===m.a?' selected':''}>🏆 ${escapeHtml(m.a)}</option>`;
+    if(m.b) wOpts+=`<option value='${escapeHtml(m.b)}'${m.winner===m.b?' selected':''}>🏆 ${escapeHtml(m.b)}</option>`;
+    rows+=`<div class='ted-row'>
+      <div class='ted-label'>${escapeHtml(m.label)}</div>
+      <div class='ted-fields'>
+        <select class='ted-sel' onchange='tournDraftSet(${i},0,this.value)'>${fopts(m.a)}</select>
+        <span class='ted-vs'>vs</span>
+        <select class='ted-sel' onchange='tournDraftSet(${i},1,this.value)'>${fopts(m.b)}</select>
+        <select class='ted-sel ted-win' onchange='tournDraftSet(${i},2,this.value)'>${wOpts}</select>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=`<div class='ted'>
+    <div class='ted-head'>✏️ Edici&oacute;n manual del cuadro</div>
+    ${rows}
+    <div class='ted-actions'>
+      <button class='btn-mini' onclick='saveTournEdit()'>💾 Guardar cambios</button>
+      <button class='btn-mini' onclick='cancelTournEdit()'>Cancelar</button>
+    </div>
+    <p class='ted-note'>Ajusta participantes y resultados de cada combate. Al guardar se recalcula el avance y el campe&oacute;n, y se sincronizan los combates apostables abiertos. Las apuestas ya cobradas no se revierten.</p>
+  </div>`;
+}
+function saveTournEdit(){
+  if(!requireAdmin()||!tourn||!tournDraft) return;
+  tournDraft.forEach((d,i)=>{
+    const m=tourn.matches[i]; if(!m) return;
+    m.a=d.a||null; m.b=d.b||null;
+    m.winner=(d.winner&&(d.winner===m.a||d.winner===m.b))?d.winner:null;
+  });
+  // propagación suave: rellena huecos del siguiente combate con el ganador
+  tourn.matches.forEach(m=>{
+    if(m.winner && m.feedsMatch!=null){
+      const nm=tourn.matches[m.feedsMatch];
+      if(nm && !nm[m.feedsSlot]) nm[m.feedsSlot]=m.winner;
+    }
+  });
+  // recomputar campeón desde la Final (match 3)
+  const fin=tourn.matches[3];
+  if(fin && fin.winner){ tourn.champion=fin.winner; tourn.done=true; }
+  else { tourn.champion=null; tourn.done=false; }
+  reconcileTournFights();
+  tournEdit=false; tournDraft=null;
+  addNews('✏️','El cuadro del torneo se ha ajustado manualmente.',
+    ['🔧 Un administrador corrigió participantes o resultados del cuadro.']);
+  save(); render();
+  toast('Cuadro actualizado');
+}
+function reconcileTournFights(){
+  if(!tourn || tourn.format!=='custom5') return;
+  tourn.matches.forEach((m,i)=>{
+    const f=m.fightId?getFight(m.fightId):null;
+    if(f && f.status==='open'){
+      // sincroniza nombres del combate apostable abierto con el cuadro
+      if(m.a) f.red=m.a;
+      if(m.b) f.blue=m.b;
+      f.name='Torneo · '+m.label;
+    }
+    // crea combate apostable si el emparejamiento está listo, sin ganador y sin combate abierto
+    if(m.a && m.b && !m.winner && !(f && f.status==='open')){
+      if(f && f.status!=='open') m.fightId=null; // soltar combate ya resuelto
+      createCustomTournFight(i);
+    }
+  });
 }
 function toggleSection(key){
   collapsed[key]=!collapsed[key];
