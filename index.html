@@ -341,7 +341,7 @@
   .hint b{color:var(--gold2); font-weight:600}
   .payout{color:#5fe6a3; font-weight:600}
 
-  .layout{display:grid; grid-template-columns:300px minmax(0,1fr) 330px; gap:18px; align-items:start; margin-top:24px}
+  .layout{display:grid; grid-template-columns:72px minmax(0,1fr) 330px; gap:18px; align-items:start; margin-top:24px}
   .main{min-width:0}
   .main .grid{margin-top:0}
   .rail{position:sticky; top:18px}
@@ -351,10 +351,33 @@
   }
   /* perspectiva 3D: solo en pantallas grandes donde los rails son laterales fijos */
   @media(min-width:1201px){
-    .rail{transition:transform .4s ease; transform-style:preserve-3d}
-    .rail-left{transform:perspective(1700px) rotateY(7deg)}
-    .rail:not(.rail-left){transform:perspective(1700px) rotateY(-7deg)}
-    .rail:hover{transform:perspective(1700px) rotateY(0deg)}
+    .rail:not(.dock-rail){transition:transform .4s ease; transform-style:preserve-3d}
+    .rail-left:not(.dock-rail){transform:perspective(1700px) rotateY(7deg)}
+    .rail:not(.rail-left):not(.dock-rail){transform:perspective(1700px) rotateY(-7deg)}
+    .rail:not(.dock-rail):hover{transform:perspective(1700px) rotateY(0deg)}
+  }
+
+  /* ---- Icon Dock ---- */
+  .dock-rail{padding:10px 6px; gap:8px; background:linear-gradient(180deg,#1b1b23,#10101a); border:1px solid var(--border2); border-radius:14px; display:flex; flex-direction:column; align-items:center; overflow:visible !important; z-index:100; transform:none !important; transform-style:flat !important}
+  .dock-btn{width:52px; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; border-radius:12px; border:1px solid transparent; background:transparent; cursor:pointer; padding:6px 4px; transition:.2s; color:inherit}
+  .dock-btn:hover{border-color:rgba(212,175,55,.35); background:rgba(212,175,55,.07)}
+  .dock-btn.dock-active{border-color:var(--gold); background:rgba(212,175,55,.14); box-shadow:0 0 16px rgba(212,175,55,.2)}
+  .dock-icon{font-size:1.3rem; line-height:1}
+  .dock-lbl{font-size:.37rem; text-transform:uppercase; letter-spacing:1.1px; color:var(--muted); font-weight:600; white-space:nowrap}
+  .dock-btn.dock-active .dock-lbl{color:var(--gold2)}
+
+  /* ---- Dock sliding panels ---- */
+  .dock-panel{position:absolute; left:calc(100% + 10px); top:0; width:310px; z-index:400; background:linear-gradient(180deg,#17171f,#101015); border:1px solid var(--border2); border-radius:14px; padding:16px 14px 22px; box-shadow:10px 10px 50px rgba(0,0,0,.7); display:none; max-height:calc(100vh - 40px); overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--border2) transparent}
+  .dock-panel.panel-open{display:block}
+  .dock-panel-hd{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border)}
+  .dock-panel-title{font-family:var(--display); font-size:.82rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--gold2)}
+  .dock-panel-x{background:none; border:none; color:var(--muted); font-size:.85rem; cursor:pointer; padding:2px 7px; border-radius:6px; transition:.15s; line-height:1}
+  .dock-panel-x:hover{color:var(--red2); background:rgba(255,45,45,.1)}
+  .dp-section-title{font-family:var(--display); font-size:.72rem; text-transform:uppercase; letter-spacing:1.4px; color:var(--gold2); margin:0 0 6px; font-weight:600}
+  .dp-sep{height:1px; background:var(--border); margin:18px 0}
+  @media(max-width:1200px){
+    .dock-rail{flex-direction:row; flex-wrap:wrap; justify-content:flex-start; border-radius:10px}
+    .dock-panel{position:relative; left:0; width:100%; max-height:none; box-shadow:none; border-radius:10px; margin-top:8px}
   }
 
   /* ---------- Tabla de ranking ---------- */
@@ -869,9 +892,32 @@
   </div>
 
   <div class="layout">
-   <aside class="rail rail-left">
-     <div class="card">
-       <h2>🏦 Banco · Préstamos</h2>
+   <aside class="rail rail-left dock-rail">
+
+     <!-- Icono: Banco / Préstamos -->
+     <button class="dock-btn" id="dockBtn-loan" onclick="toggleDock('loan')" title="Banco · Préstamos">
+       <span class="dock-icon">🏦</span>
+       <span class="dock-lbl">Banco</span>
+     </button>
+
+     <!-- Icono: Patrocinadores -->
+     <button class="dock-btn" id="dockBtn-sponsor" onclick="toggleDock('sponsor')" title="Patrocinadores">
+       <span class="dock-icon">🤝</span>
+       <span class="dock-lbl">Sponsor</span>
+     </button>
+
+     <!-- Icono: Administración (admin-only) -->
+     <button class="dock-btn admin-only" id="dockBtn-admin" onclick="toggleDock('admin')" title="Administración">
+       <span class="dock-icon">⚙️</span>
+       <span class="dock-lbl">Admin</span>
+     </button>
+
+     <!-- PANEL: Banco · Préstamos -->
+     <div id="dockPanel-loan" class="dock-panel">
+       <div class="dock-panel-hd">
+         <span class="dock-panel-title">🏦 Banco · Préstamos</span>
+         <button class="dock-panel-x" onclick="toggleDock(null)">✕</button>
+       </div>
        <label>Apostador</label>
        <select id="loanBettor"></select>
        <div id="loanBettorDisplay" style="display:none; padding:11px 13px; background:#0c0c11; border:1px solid var(--border2); border-radius:9px; font-size:.95rem; color:var(--txt)"></div>
@@ -883,22 +929,35 @@
          Interés progresivo al pagar: <b>5%</b> base <b>+5%</b> por cada combate resuelto desde que lo pediste (tope <b>50%</b>).<br>
          Tras pagar, ese apostador entra en <b>cooldown de 3 combates</b> antes de poder pedir otro.
        </p>
-     </div>
-
-     <div class="card" style="margin-top:18px">
-       <h2>💰 Ranking de apuestas</h2>
-       <p class="hint" style="margin-top:0; margin-bottom:12px">Posición según el <b>beneficio neto</b> en apuestas (ganado − perdido).</p>
+       <div class="dp-sep"></div>
+       <h3 class="dp-section-title">💰 Ranking de apuestas</h3>
+       <p class="hint" style="margin:4px 0 12px">Posición según el <b>beneficio neto</b> en apuestas (ganado − perdido).</p>
        <div id="betRankingList"></div>
      </div>
 
-     <div class="card admin-only" style="margin-top:18px">
-       <h2>👥 Usuarios</h2>
-       <p class="hint" style="margin-top:0; margin-bottom:10px">Gestiona cuentas y roles (solo admin).</p>
-       <div id="usersList"></div>
+     <!-- PANEL: Patrocinadores -->
+     <div id="dockPanel-sponsor" class="dock-panel">
+       <div class="dock-panel-hd">
+         <span class="dock-panel-title">🤝 Patrocinadores</span>
+         <button class="dock-panel-x" onclick="toggleDock(null)">✕</button>
+       </div>
+       <p class="hint" style="margin:0 0 14px">Firma contratos según tu nivel de reputación. Cobras ingresos por cada combate disputado y un bonus extra al ganar.</p>
+       <div id="sponsorPanel"></div>
      </div>
 
-     <div class="card admin-only" style="margin-top:18px">
-       <h2>⏱ Cuenta atrás</h2>
+     <!-- PANEL: Administración (admin-only) -->
+     <div id="dockPanel-admin" class="dock-panel admin-only">
+       <div class="dock-panel-hd">
+         <span class="dock-panel-title">⚙️ Administración</span>
+         <button class="dock-panel-x" onclick="toggleDock(null)">✕</button>
+       </div>
+
+       <h3 class="dp-section-title">👥 Usuarios</h3>
+       <p class="hint" style="margin:4px 0 10px">Gestiona cuentas y roles (solo admin).</p>
+       <div id="usersList"></div>
+
+       <div class="dp-sep"></div>
+       <h3 class="dp-section-title">⏱ Cuenta atrás</h3>
        <label>Nombre del evento</label>
        <input id="eventLabel" placeholder="Ej: UFC 310 · Madrid" maxlength="40">
        <label>Fecha y hora del evento</label>
@@ -906,17 +965,10 @@
        <button class="btn-primary" onclick="setNextEvent()">Activar cuenta atrás</button>
        <button class="btn-mini" style="margin-top:8px; width:100%; text-align:center" onclick="clearNextEvent()">✕ Quitar cuenta atrás</button>
        <div id="eventCurrentInfo" class="hint" style="margin-top:10px"></div>
-     </div>
 
-     <div class="card" style="margin-top:18px">
-       <h2>🤝 Patrocinadores</h2>
-       <p class="hint" style="margin-top:0;margin-bottom:12px">Firma contratos según tu nivel de reputación. Cobras ingresos por cada combate disputado y un bonus extra al ganar.</p>
-       <div id="sponsorPanel"></div>
-     </div>
-
-     <div class="card admin-only" style="margin-top:18px">
-       <h2>⚙️ Config. Patrocinadores</h2>
-       <p class="hint" style="margin-top:0;margin-bottom:10px">Puntos de reputación por resultado (solo admin).</p>
+       <div class="dp-sep"></div>
+       <h3 class="dp-section-title">🤝 Config. Patrocinadores</h3>
+       <p class="hint" style="margin:4px 0 10px">Puntos de reputación por resultado (solo admin).</p>
        <label>Puntos base por victoria</label>
        <input id="rep-winBase" type="number" min="0" step="1">
        <label>Bonus por posición del rival (por puesto)</label>
@@ -924,9 +976,10 @@
        <label>Puntos por derrota (negativo para penalizar)</label>
        <input id="rep-loss" type="number" step="1">
        <button class="btn-primary" style="margin-top:12px" onclick="saveRepConfig()">💾 Guardar</button>
-     </div>
-       <p class="hint" style="margin-top:0;margin-bottom:12px">Todas las cantidades se aplican automáticamente al declarar el resultado de cada combate.</p>
 
+       <div class="dp-sep"></div>
+       <h3 class="dp-section-title">💰 Config. Recompensas</h3>
+       <p class="hint" style="margin:4px 0 12px">Todas las cantidades se aplican automáticamente al declarar el resultado de cada combate.</p>
        <div class="rewards-grid">
          <div class="rw-group">
            <div class="rw-group-title">💼 Bolsa por combate</div>
@@ -962,6 +1015,7 @@
        <button class="btn-primary" style="margin-top:14px" onclick="saveRewardConfig()">💾 Guardar configuración</button>
        <div id="rewardConfigInfo" class="hint" style="margin-top:8px"></div>
      </div>
+
    </aside>
    <div class="main">
   <div class="grid">
@@ -1198,6 +1252,20 @@ let authMode = 'login';
 let collapsed = {};
 let tournEdit = false;
 let tournDraft = null;
+let dockCurrent = null;
+
+function toggleDock(name){
+  if(name && name===dockCurrent) name=null;
+  dockCurrent=name;
+  document.querySelectorAll('.dock-btn').forEach(b=>b.classList.remove('dock-active'));
+  document.querySelectorAll('.dock-panel').forEach(p=>p.classList.remove('panel-open'));
+  if(name){
+    const btn=document.getElementById('dockBtn-'+name);
+    if(btn) btn.classList.add('dock-active');
+    const panel=document.getElementById('dockPanel-'+name);
+    if(panel) panel.classList.add('panel-open');
+  }
+}
 
 // ---- Configuración de recompensas económicas (configurable por admin) ----
 let rewardConfig = {
