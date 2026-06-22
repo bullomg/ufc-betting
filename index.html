@@ -1483,13 +1483,31 @@ function renderUsers(){
     const me = currentUser && currentUser.username===u.username;
     const isAdm = u.role==='admin';
     const initial = escapeHtml(u.username.charAt(0).toUpperCase());
+    const linked = u.fighterLink||'';
+    const fighterOpts = ['<option value="">— Sin luchador —</option>',
+      ...fighters.map(f=>`<option value="${escapeHtml(f)}"${linked===f?' selected':''}>${escapeHtml(f)}</option>`)
+    ].join('');
     return `<div class="user-row${isAdm?' is-admin':''}">
         <div class="user-avatar ${isAdm?'adm':'reg'}">${initial}</div>
         <div class="user-info">
-          <span class="user-name">${escapeHtml(u.username)}</span>
-          <div class="user-badges">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="user-name" id="uname-display-${i}">${escapeHtml(u.username)}</span>
+            <button class="btn-mini" style="padding:2px 7px;font-size:.55rem" onclick="toggleRenameUser(${i})" title="Renombrar usuario">✏️</button>
+          </div>
+          <div id="uname-edit-${i}" style="display:none;margin-top:5px;display:none">
+            <div style="display:flex;gap:5px;align-items:center">
+              <input id="uname-input-${i}" value="${escapeHtml(u.username)}" style="flex:1;padding:5px 8px;font-size:.78rem;border-radius:7px;background:#0c0c11;border:1px solid var(--border2);color:var(--txt)" maxlength="20">
+              <button class="btn-mini" onclick="renameUser(${i})" style="padding:4px 9px">✓</button>
+              <button class="btn-mini" onclick="toggleRenameUser(${i})" style="padding:4px 9px">✕</button>
+            </div>
+          </div>
+          <div class="user-badges" style="margin-top:4px">
             <span class="role-badge ${isAdm?'':'user'}">${isAdm?'ADMIN':'USUARIO'}</span>
             ${me?'<span class="role-badge user">tú</span>':''}
+            ${linked?`<span class="role-badge" style="background:rgba(212,175,55,.2);color:var(--gold2);border-color:rgba(212,175,55,.3)">🥊 ${escapeHtml(linked)}</span>`:''}
+          </div>
+          <div style="margin-top:7px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <select class="dw-select" style="flex:1;min-width:130px;font-size:.72rem;padding:5px 8px" onchange="linkFighterToUser(${i},this.value)">${fighterOpts}</select>
           </div>
         </div>
         <div class="user-actions">
@@ -1501,6 +1519,87 @@ function renderUsers(){
         </div>
       </div>`;
   }).join('');
+}
+
+// Vincular luchador a usuario
+function linkFighterToUser(idx, fighterName){
+  if(!requireAdmin()) return;
+  const u=users[idx]; if(!u) return;
+  u.fighterLink = fighterName||null;
+  save(); render();
+  toast(fighterName ? `${u.username} vinculado a ${fighterName}` : `Vínculo de ${u.username} eliminado`);
+}
+
+// Mostrar/ocultar input de renombrar usuario
+function toggleRenameUser(idx){
+  const display=document.getElementById('uname-display-'+idx);
+  const edit=document.getElementById('uname-edit-'+idx);
+  if(!display||!edit) return;
+  const showing=edit.style.display!=='none';
+  edit.style.display=showing?'none':'flex';
+  edit.style.flexDirection='column';
+}
+
+// Renombrar usuario (y actualizar referencias)
+function renameUser(idx){
+  if(!requireAdmin()) return;
+  const u=users[idx]; if(!u) return;
+  const input=document.getElementById('uname-input-'+idx); if(!input) return;
+  const newName=input.value.trim();
+  if(!newName){ toast('El nombre no puede estar vacío'); return; }
+  if(newName===u.username){ toggleRenameUser(idx); return; }
+  if(users.find(x=>x.username===newName)){ toast('Ya existe un usuario con ese nombre'); return; }
+  const oldName=u.username;
+  // actualizar apostador vinculado
+  const b=bettors.find(x=>x.name.trim().toLowerCase()===oldName.trim().toLowerCase());
+  if(b) b.name=newName;
+  // actualizar sesión activa si es el propio usuario
+  if(currentUser && currentUser.username===oldName) currentUser.username=newName;
+  u.username=newName;
+  save(); render(); applyAuthUI();
+  toast(`Usuario renombrado: ${oldName} → ${newName}`);
+}
+
+// Renombrar luchador del ranking (mantiene historial, perfiles, reputación, contratos)
+function renameFighter(oldName){
+  if(!requireAdmin()) return;
+  const newName=prompt(`Nuevo nombre para "${oldName}":`, oldName);
+  if(!newName||newName.trim()===oldName.trim()) return;
+  const n=newName.trim();
+  if(fighters.find(f=>f.trim().toLowerCase()===n.toLowerCase())){ toast('Ya existe un luchador con ese nombre'); return; }
+
+  const ok=oldName.trim().toLowerCase();
+  const nk=n.toLowerCase();
+
+  // ranking
+  const idx=fighters.findIndex(f=>f.trim().toLowerCase()===ok);
+  if(idx>=0) fighters[idx]=n;
+
+  // combates (red/blue/winner)
+  fights.forEach(f=>{
+    if(f.red.trim().toLowerCase()===ok) f.red=n;
+    if(f.blue.trim().toLowerCase()===ok) f.blue=n;
+  });
+
+  // cinturones
+  if(champion&&champion.trim().toLowerCase()===ok) champion=n;
+  if(bmf&&bmf.trim().toLowerCase()===ok) bmf=n;
+
+  // perfil
+  if(fighterProfiles[ok]){ fighterProfiles[nk]=fighterProfiles[ok]; delete fighterProfiles[ok]; }
+
+  // reputación / contratos
+  if(fighterRep[ok]){ fighterRep[nk]=fighterRep[ok]; delete fighterRep[ok]; }
+
+  // vínculos de usuarios
+  users.forEach(u=>{ if(u.fighterLink&&u.fighterLink.trim().toLowerCase()===ok) u.fighterLink=n; });
+
+  // apostador vinculado
+  const b=bettors.find(x=>x.name.trim().toLowerCase()===ok);
+  if(b) b.name=n;
+
+  save(); render();
+  toast(`Luchador renombrado: ${oldName} → ${n}`);
 }
 function finishAuth(){
   document.getElementById('authUser').value='';
@@ -1729,6 +1828,16 @@ function getFight(id){ return fights.find(f=>f.id===id); }
 function ownsBettor(b){ return !!currentUser && !!b && b.name.trim().toLowerCase()===currentUser.username.trim().toLowerCase(); }
 function myBettors(){ return currentUser? bettors.filter(ownsBettor) : []; }
 function canActAs(b){ return isAdmin() || ownsBettor(b); }
+
+// --- Vinculación usuario ↔ luchador ---
+function getLinkedFighter(username){
+  const u=users.find(x=>x.username===username);
+  return u?.fighterLink||null;
+}
+function getMyFighterName(){
+  if(!currentUser) return null;
+  return getLinkedFighter(currentUser.username);
+}
 // asegura que apostadores guardados antes del banco tengan los campos nuevos
 function migrateBettors(){
   bettors.forEach(b=>{
@@ -2697,12 +2806,12 @@ function fighterBadges(name){
 function rankRowHtml(p,posCell,extraClass){
   const total=p.w+p.l, pct=total?Math.round(p.w/total*100):0;
   const idx=fighters.findIndex(n=>n.trim().toLowerCase()===p.name.trim().toLowerCase());
-  const hasProfile=!!getProfile(p.name).nationality||!!getProfile(p.name).photo||!!getProfile(p.name).bio;
   return `<tr class="${extraClass||''}">
       <td class="pos">${posCell}</td>
       <td>
         <span class="rank-name rank-name-link" onclick="openFighterModal('${escapeHtml(p.name)}')" title="Ver ficha">${escapeHtml(p.name)}</span>
         ${fighterBadges(p.name)}
+        ${isAdmin()?`<button class="x-fighter" title="Renombrar luchador" onclick="renameFighter('${escapeHtml(p.name)}')" style="margin-left:4px;opacity:.6;font-size:.6rem">✏️</button>`:''}
         ${isAdmin()?`<button class="x-fighter" title="Quitar del ranking" onclick="removeFighterAt(${idx})">✕</button>`:''}
       </td>
       <td class="c"><span class="rec-w">${p.w}</span>-<span class="rec-l">${p.l}</span></td>
@@ -3257,10 +3366,10 @@ function renderSponsorPanel(){
   const el=document.getElementById('sponsorPanel'); if(!el) return;
   if(!currentUser){ el.innerHTML='<p class="empty" style="padding:10px">Inicia sesión para ver tus contratos.</p>'; return; }
 
-  // buscar el luchador vinculado al usuario actual
-  const myFighter=fighters.find(n=>n.trim().toLowerCase()===currentUser.username.trim().toLowerCase());
+  const myFighter=getMyFighterName();
   if(!myFighter){
-    el.innerHTML='<p class="hint" style="margin:0">Tu usuario no está registrado como luchador en el ranking.</p>'; return;
+    el.innerHTML=`<p class="hint" style="margin:0">No tienes ningún luchador asignado. Pide al administrador que te vincule con tu luchador.</p>`;
+    return;
   }
 
   const rep=getFighterRep(myFighter);
