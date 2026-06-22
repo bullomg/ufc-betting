@@ -586,7 +586,28 @@
   .bg::after{content:""; position:absolute; inset:0; background:
       radial-gradient(120% 90% at 50% 50%,transparent 30%,rgba(8,8,10,.55) 78%,rgba(8,8,10,.92) 100%);}
   @media(max-width:820px){ .bg svg{opacity:.4} }
-  /* ===== MODAL FICHA LUCHADOR ===== */
+  /* ===== Panel de recompensas ===== */
+  .rewards-grid{ display:flex; flex-direction:column; gap:14px; }
+  .rw-group{ background:rgba(0,0,0,.2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .rw-group-title{ font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--gold2); margin-bottom:8px; }
+  .rw-group label{ margin-top:8px; }
+  .rw-group label:first-of-type{ margin-top:0; }
+
+  /* ===== Registro de recompensas (log) ===== */
+  .reward-log{ margin-top:10px; }
+  .reward-entry{
+    display:flex; align-items:center; gap:8px; padding:6px 0;
+    border-bottom:1px solid var(--border); font-size:.78rem;
+  }
+  .reward-entry:last-child{ border-bottom:none; }
+  .reward-icon{ font-size:1rem; flex:0 0 auto; }
+  .reward-body{ flex:1; min-width:0; }
+  .reward-name{ font-weight:600; color:var(--txt); }
+  .reward-desc{ font-size:.68rem; color:var(--muted); margin-top:1px; }
+  .reward-amount{ font-family:var(--display); font-size:.95rem; color:#5fe6a3; flex:0 0 auto; font-weight:400; letter-spacing:.5px; }
+  .reward-amount.special{ background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+
   .fighter-modal-overlay{
     position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center;
     background:rgba(4,4,6,.88); backdrop-filter:blur(8px); padding:16px;
@@ -836,6 +857,46 @@
        <button class="btn-mini" style="margin-top:8px; width:100%; text-align:center" onclick="clearNextEvent()">✕ Quitar cuenta atrás</button>
        <div id="eventCurrentInfo" class="hint" style="margin-top:10px"></div>
      </div>
+
+     <div class="card admin-only" style="margin-top:18px">
+       <h2>💸 Recompensas económicas</h2>
+       <p class="hint" style="margin-top:0;margin-bottom:12px">Todas las cantidades se aplican automáticamente al declarar el resultado de cada combate.</p>
+
+       <div class="rewards-grid">
+         <div class="rw-group">
+           <div class="rw-group-title">💼 Bolsa por combate</div>
+           <label>Victoria ($)</label>
+           <input id="rw-winReward" type="number" min="0" step="50">
+           <label>Derrota / Show ($)</label>
+           <input id="rw-loseReward" type="number" min="0" step="50">
+         </div>
+         <div class="rw-group">
+           <div class="rw-group-title">🏆 Bonus cinturones</div>
+           <label>Ganar cinturón campeón ($)</label>
+           <input id="rw-beltBonus" type="number" min="0" step="100">
+           <label>Ganar cinturón BMF ($)</label>
+           <input id="rw-bmfBonus" type="number" min="0" step="100">
+         </div>
+         <div class="rw-group">
+           <div class="rw-group-title">🔥 Bonus de racha</div>
+           <label>Victorias consecutivas para bonus</label>
+           <input id="rw-streakCount" type="number" min="2" max="20" step="1">
+           <label>Premio por racha ($)</label>
+           <input id="rw-streakBonus" type="number" min="0" step="50">
+         </div>
+         <div class="rw-group">
+           <div class="rw-group-title">⭐ Bonus de actuación</div>
+           <label>Combate de la Noche ($)</label>
+           <input id="rw-fotnBonus" type="number" min="0" step="50">
+           <label>KO de la Noche ($)</label>
+           <input id="rw-koBonus" type="number" min="0" step="50">
+           <label>Sumisión de la Noche ($)</label>
+           <input id="rw-subBonus" type="number" min="0" step="50">
+         </div>
+       </div>
+       <button class="btn-primary" style="margin-top:14px" onclick="saveRewardConfig()">💾 Guardar configuración</button>
+       <div id="rewardConfigInfo" class="hint" style="margin-top:8px"></div>
+     </div>
    </aside>
    <div class="main">
   <div class="grid">
@@ -1039,23 +1100,36 @@ const LOAN_RATE_CAP   = 0.50;   // tope del 50%
 const ODDS_K = 300;             // con este total apostado, dinero y récord pesan ~50/50 (más dinero => más peso del mercado)
 
 let bettors = [];   // {id, name, balance, loan:null|{principal,takenAt}, loanCooldownUntil}
-let fights = [];    // {id, name, red, blue, status:'open'|'closed', winner:null|'red'|'blue', bets:[{bettorId, side, amount}]}
+let fights = [];    // {id, name, red, blue, status:'open'|'closed', winner:null|'red'|'blue', bets:[...]}
 let nextBettorId = 1, nextFightId = 1;
-let fightClock = 0; // contador monótono de combates resueltos (para intereses y cooldown)
-let champion = null; // nombre del peleador que posee el cinturón UFC (o null = vacante)
-let bmf = null;      // nombre del peleador que posee el cinturón BMF (o null = vacante)
-let fighters = [];   // peleadores registrados en el ranking (nombres)
-let fighterProfiles = {}; // fichas {nombre_lower: {photo, age, nationality, height, weight, reach, stance, style, team, nickname, hometown, debut, bio}}
-let news = [];       // tablón de noticias [{ts, icon, text}]
-let fotn = null;     // id del combate marcado como "Combate de la Noche"
-let tourn = null;    // torneo: estándar {size,rounds,roundNames,champion,done} | custom5 {format:'custom5',size,players,matches,champion,done}
-let users = [];      // cuentas [{username, password, role:'admin'|'user'}]
-let nextEvent = null; // cuenta atrás {label, ts} o null
-let currentUser = null; // sesión actual
-let authMode = 'login'; // 'login' | 'register'
-let collapsed = {};  // secciones plegadas de la cartelera {clave:true}
-let tournEdit = false; // modo edición manual del cuadro (admin)
-let tournDraft = null; // borrador editable del cuadro mientras se edita
+let fightClock = 0;
+let champion = null;
+let bmf = null;
+let fighters = [];
+let fighterProfiles = {};
+let news = [];
+let fotn = null;
+let tourn = null;
+let users = [];
+let nextEvent = null;
+let currentUser = null;
+let authMode = 'login';
+let collapsed = {};
+let tournEdit = false;
+let tournDraft = null;
+
+// ---- Configuración de recompensas económicas (configurable por admin) ----
+let rewardConfig = {
+  winReward:    500,   // $ por ganar un combate
+  loseReward:   100,   // $ por perder un combate (show money)
+  beltBonus:    2000,  // $ gran premio por ganar el cinturón de campeón
+  bmfBonus:     1000,  // $ por ganar el cinturón BMF
+  streakBonus:  300,   // $ bonus por racha de victorias
+  streakCount:  3,     // victorias consecutivas necesarias para el bonus
+  fotnBonus:    500,   // $ bonus de actuación: Combate de la Noche
+  koBonus:      400,   // $ bonus de actuación: KO de la Noche
+  subBonus:     400,   // $ bonus de actuación: Sumisión de la Noche
+};
 
 /* ===================== FIREBASE (modo online opcional) =====================
    Pega aquí la config de tu proyecto Firebase (Configuración del proyecto > Tus apps > Web).
@@ -1084,7 +1158,7 @@ const OWNER = 'Bullsito';
 /* ---------- persistencia (localStorage + nube opcional) ---------- */
 let storageOK = true;
 function gatherState(){
-  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent};
+  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent,rewardConfig};
 }
 function applyState(d){
   if(!d) return;
@@ -1093,6 +1167,7 @@ function applyState(d){
   fighterProfiles=d.fighterProfiles||{};
   news=d.news||[]; fotn=d.fotn||null; tourn=d.tourn||null; users=d.users||[];
   nextEvent=d.nextEvent||null;
+  if(d.rewardConfig) rewardConfig={...rewardConfig,...d.rewardConfig};
   migrateBettors(); migrateFighters();
 }
 function save(){
@@ -2060,14 +2135,22 @@ function toggleSection(key){
 }
 function toggleFotn(id){
   if(!requireAdmin()) return;
-  if(fotn===id){ fotn=null; toast('Combate de la Noche retirado'); }
-  else {
+  if(fotn===id){
+    fotn=null; toast('Combate de la Noche retirado');
+  } else {
     fotn=id;
     const f=getFight(id);
-    if(f) addNews('⭐', `Combate de la Noche: ${f.red} vs ${f.blue}.`,
-      ['⭐ Premio a la mejor pelea de la velada',
-       '🥊 '+f.red+' ('+recordStr(f.red)+') vs '+f.blue+' ('+recordStr(f.blue)+')',
-       f.winner? ('🏆 Ganador: '+(f.winner==='red'?f.red:f.blue)) : '⏳ Combate aún sin resolver']);
+    if(f){
+      addNews('⭐', `Combate de la Noche: ${f.red} vs ${f.blue}.`,
+        ['⭐ Premio a la mejor pelea de la velada',
+         '🥊 '+f.red+' ('+recordStr(f.red)+') vs '+f.blue+' ('+recordStr(f.blue)+')',
+         f.winner? ('🏆 Ganador: '+(f.winner==='red'?f.red:f.blue)) : '⏳ Combate aún sin resolver']);
+      // bonus de actuación a ambos luchadores si el combate ya está cerrado
+      if(f.status==='closed'){
+        applyPerformanceBonus('fotn', f.red);
+        applyPerformanceBonus('fotn', f.blue);
+      }
+    }
     toast('⭐ Marcado como Combate de la Noche');
   }
   save(); render();
@@ -2185,6 +2268,7 @@ function declareWinner(fid, side){
   // transferencia automática de cinturones
   const loserKey = loserName.trim().toLowerCase();
   let beltMsg='';
+  let isNewBelt=false, isNewBmf=false;
   const nBets=f.bets.length, nWin=f.bets.filter(b=>betIsWinner(b,f)).length;
   const winnerProb = side==='red'? probs.pRed : probs.pBlue;
   const roundName = (f.tourn && tourn)
@@ -2195,7 +2279,7 @@ function declareWinner(fid, side){
   addNews('🥊', `${winnerName} derrota a ${loserName}${f.name?' en '+f.name:''}. ${methodLabel}${roundTxt}.`,
     fightReport(winnerName, loserName, f, winnerProb, total, nBets, nWin, oddsWin, !!f.tourn, roundName));
   if(champion && champion.trim().toLowerCase()===loserKey){
-    champion=winnerName; beltMsg+=' 🏆 ¡Nuevo campeón!';
+    champion=winnerName; beltMsg+=' 🏆 ¡Nuevo campeón!'; isNewBelt=true;
     addNews('👑', `¡${winnerName} destrona a ${loserName} y se proclama nuevo campeón de la UFC!`,
       ['📰 '+pick([
           `Cambio de era en la división. ${winnerName} ha arrebatado el cinturón a ${loserName} y se sienta en el trono de la UFC.`,
@@ -2209,7 +2293,7 @@ function declareWinner(fid, side){
         ])]);
   }
   if(bmf && bmf.trim().toLowerCase()===loserKey){
-    bmf=winnerName; beltMsg+=' 🥊 ¡Nuevo BMF!';
+    bmf=winnerName; beltMsg+=' 🥊 ¡Nuevo BMF!'; isNewBmf=true;
     addNews('🔥', `¡${winnerName} le arrebata el cinturón BMF a ${loserName}!`,
       ['📰 '+pick([
           `El cinturón del más cabrón cambia de dueño: ${winnerName} le ha quitado el BMF a ${loserName} a base de huevos.`,
@@ -2223,6 +2307,9 @@ function declareWinner(fid, side){
   }
 
   if(f.tourn) advanceTournament(f, winnerName);
+
+  // --- recompensas económicas automáticas ---
+  applyFightRewards(f, side, side==='red'?'blue':'red', isNewBelt, isNewBmf);
 
   save(); render();
   toast('¡'+winnerName+' gana! ('+methodLabel+')'+beltMsg);
@@ -2303,6 +2390,7 @@ function render(){
   renderNews();
   renderUsers();
   renderCountdown();
+  renderRewardConfig();
   // refrescar cartera en el userbar
   if(currentUser){
     const myB = bettors.find(b=>b.name.trim().toLowerCase()===currentUser.username.trim().toLowerCase());
@@ -2900,6 +2988,121 @@ function saveFighterProfile(name){
   toast('Ficha de '+name+' guardada');
   // reabrir modal de ficha con los datos nuevos
   openFighterModal(name);
+}
+
+/* ===== FASE 4: SISTEMA ECONÓMICO AVANZADO ===== */
+
+// calcula racha actual de victorias consecutivas de un luchador (antes de añadir el combate actual)
+function currentStreak(name){
+  const key=name.trim().toLowerCase();
+  const closed=[...fights].filter(f=>f.status==='closed'&&f.winner).reverse(); // más reciente primero
+  let streak=0;
+  for(const f of closed){
+    const wk=(f.winner==='red'?f.red:f.blue).trim().toLowerCase();
+    const lk=(f.winner==='red'?f.blue:f.red).trim().toLowerCase();
+    if(wk===key) streak++;
+    else if(lk===key) break;
+  }
+  return streak;
+}
+
+// pagar recompensa a un luchador (busca su bettor por nombre)
+function payFighter(name, amount, desc, icon='💰'){
+  const key=name.trim().toLowerCase();
+  const b=bettors.find(x=>x.name.trim().toLowerCase()===key);
+  if(!b||amount<=0) return false;
+  b.balance+=amount;
+  // noticia de recompensa breve
+  addNews(icon, `${name} cobra ${money(amount)} — ${desc}.`, []);
+  return true;
+}
+
+// aplicar todas las recompensas al cerrar un combate
+function applyFightRewards(f, winnerSide, loserSide, isNewBelt, isNewBmf){
+  const winnerName = winnerSide==='red'?f.red:f.blue;
+  const loserName  = winnerSide==='red'?f.blue:f.red;
+  const rewardLines=[];
+
+  // --- bolsa victoria ---
+  if(rewardConfig.winReward>0){
+    payFighter(winnerName, rewardConfig.winReward, 'Bolsa de victoria', '🏆');
+    rewardLines.push(`🏆 ${winnerName} cobra bolsa de victoria: ${money(rewardConfig.winReward)}`);
+  }
+  // --- show money (derrota) ---
+  if(rewardConfig.loseReward>0){
+    payFighter(loserName, rewardConfig.loseReward, 'Bolsa por combate (show)', '💼');
+    rewardLines.push(`💼 ${loserName} cobra bolsa por combate: ${money(rewardConfig.loseReward)}`);
+  }
+  // --- gran premio cinturón ---
+  if(isNewBelt && rewardConfig.beltBonus>0){
+    payFighter(winnerName, rewardConfig.beltBonus, 'Gran premio por cinturón de campeón', '👑');
+    rewardLines.push(`👑 ${winnerName} cobra gran premio de cinturón: ${money(rewardConfig.beltBonus)}`);
+  }
+  // --- bonus BMF ---
+  if(isNewBmf && rewardConfig.bmfBonus>0){
+    payFighter(winnerName, rewardConfig.bmfBonus, 'Bonus cinturón BMF', '🥊');
+    rewardLines.push(`🥊 ${winnerName} cobra bonus BMF: ${money(rewardConfig.bmfBonus)}`);
+  }
+  // --- bonus de racha ---
+  const streakBefore=currentStreak(winnerName); // racha ANTES de este combate (ya cerrado)
+  // streakBefore ya incluye esta victoria porque el combate ya está closed cuando se llama
+  if(rewardConfig.streakBonus>0 && rewardConfig.streakCount>=2 && streakBefore>=rewardConfig.streakCount && streakBefore%rewardConfig.streakCount===0){
+    payFighter(winnerName, rewardConfig.streakBonus, `Bonus racha de ${streakBefore} victorias`, '🔥');
+    rewardLines.push(`🔥 ${winnerName} cobra bonus de racha (${streakBefore} victorias seguidas): ${money(rewardConfig.streakBonus)}`);
+  }
+
+  // --- bonus KO de la Noche (automático si el método es KO) ---
+  if(f.method==='ko' && rewardConfig.koBonus>0){
+    payFighter(winnerName, rewardConfig.koBonus, 'KO de la Noche', '💥');
+    rewardLines.push(`💥 ${winnerName} cobra bonus KO de la Noche: ${money(rewardConfig.koBonus)}`);
+  }
+  // --- bonus Sumisión de la Noche ---
+  if(f.method==='sub' && rewardConfig.subBonus>0){
+    payFighter(winnerName, rewardConfig.subBonus, 'Sumisión de la Noche', '🔒');
+    rewardLines.push(`🔒 ${winnerName} cobra bonus Sumisión de la Noche: ${money(rewardConfig.subBonus)}`);
+  }
+
+  if(rewardLines.length){
+    addNews('💸','Recompensas económicas del combate repartidas.',rewardLines);
+  }
+}
+
+// bonus de actuación (se aplica al marcar Combate/KO/Sub de la Noche)
+function applyPerformanceBonus(type, fighterName){
+  let amount=0, label='', icon='⭐';
+  if(type==='fotn'){ amount=rewardConfig.fotnBonus; label='Combate de la Noche'; icon='⭐'; }
+  else if(type==='ko'){  amount=rewardConfig.koBonus;   label='KO de la Noche';       icon='💥'; }
+  else if(type==='sub'){ amount=rewardConfig.subBonus;  label='Sumisión de la Noche'; icon='🔒'; }
+  if(!amount||amount<=0) return;
+  payFighter(fighterName, amount, `Bonus ${label}`, icon);
+  toast(`${icon} ${fighterName} cobra bonus ${label}: ${money(amount)}`);
+}
+
+// guardar configuración de recompensas desde el panel admin
+function saveRewardConfig(){
+  if(!requireAdmin()) return;
+  const n=id=>{ const el=document.getElementById('rw-'+id); return el?Math.max(0,+el.value||0):rewardConfig[id]; };
+  rewardConfig={
+    winReward:   n('winReward'),
+    loseReward:  n('loseReward'),
+    beltBonus:   n('beltBonus'),
+    bmfBonus:    n('bmfBonus'),
+    streakBonus: n('streakBonus'),
+    streakCount: Math.max(2,+document.getElementById('rw-streakCount')?.value||3),
+    fotnBonus:   n('fotnBonus'),
+    koBonus:     n('koBonus'),
+    subBonus:    n('subBonus'),
+  };
+  save();
+  const info=document.getElementById('rewardConfigInfo');
+  if(info){ info.textContent='✅ Configuración guardada'; setTimeout(()=>info.textContent='',2500); }
+  toast('Recompensas configuradas');
+}
+
+// rellenar inputs del panel con los valores actuales
+function renderRewardConfig(){
+  const fields=['winReward','loseReward','beltBonus','bmfBonus','streakBonus','streakCount','fotnBonus','koBonus','subBonus'];
+  fields.forEach(k=>{ const el=document.getElementById('rw-'+k); if(el) el.value=rewardConfig[k]??0; });
 }
 
 /* ===== TIPOS DE APUESTA ===== */
