@@ -299,6 +299,36 @@
   .empty{color:var(--muted); font-style:italic; text-align:center; padding:24px; font-size:.92rem}
   .winrow{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
   .winrow button{margin:0}
+
+  /* Panel declarar resultado */
+  .declare-winner-panel{
+    width:100%; background:rgba(0,0,0,.25); border:1px solid var(--border);
+    border-radius:11px; padding:12px 14px; margin-top:2px;
+  }
+  .dw-title{font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:10px}
+  .dw-row{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap}
+  .dw-row:last-child{margin-bottom:0}
+  .dw-select{flex:1; min-width:120px; background:#0c0c11; border:1px solid var(--border2); color:var(--txt);
+    padding:8px 10px; border-radius:8px; font-size:.82rem; font-family:var(--body)}
+  .dw-select:focus{outline:none; border-color:var(--gold)}
+  .dw-row .btn-win{flex:1; margin:0}
+  .dw-row .btn-mini{margin:0}
+  .dw-row .btn-del{margin:0}
+
+  /* Badge resultado combate cerrado */
+  .fight-result-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    background:linear-gradient(135deg,rgba(212,175,55,.18),rgba(212,175,55,.05));
+    border:1px solid rgba(212,175,55,.4); border-radius:8px;
+    padding:5px 12px; font-size:.78rem; font-weight:600; color:var(--gold2);
+    margin-bottom:10px; letter-spacing:.3px;
+  }
+
+  @media(max-width:600px){
+    .dw-row{ flex-direction:column; }
+    .dw-select{ min-width:unset; }
+    .dw-row .btn-win{ width:100%; }
+  }
   .toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px);
     background:linear-gradient(180deg,#1d1d27,#131319); border:1px solid var(--gold);
@@ -715,7 +745,7 @@
     </div>
 
     <!-- ===== CREAR COMBATE ===== -->
-    <div class="card">
+    <div class="card admin-only">
       <h2>🆚 Crear combate</h2>
       <label>Nombre del combate (opcional)</label>
       <input id="fightName" placeholder="Ej: Título de peso wélter">
@@ -736,6 +766,19 @@
         </div>
       </div>
       <button class="btn-primary" onclick="addFight()">Crear combate</button>
+
+      <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border)">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px">
+          <span style="font-family:var(--display); font-size:.85rem; text-transform:uppercase; letter-spacing:1px; color:var(--gold2)">⚽ Generador de Liga</span>
+        </div>
+        <p class="hint" style="margin:0 0 10px">Genera automáticamente todos los combates posibles entre los luchadores registrados (todos contra todos, sin repetir).</p>
+        <select id="leagueCard" style="margin-bottom:10px">
+          <option value="prelim">📋 Todos como Preliminares</option>
+          <option value="main" selected>🥊 Todos como Tarjeta Principal</option>
+        </select>
+        <button class="btn-primary" style="background:linear-gradient(180deg,#b8860b,#8a6200); box-shadow:0 6px 18px -6px rgba(184,134,11,.6), inset 0 1px 0 rgba(255,255,255,.2); border-color:#6b4c00" onclick="generateLeague()">🏆 Generar Liga</button>
+        <div id="leagueInfo" class="hint" style="margin-top:8px"></div>
+      </div>
     </div>
 
     <!-- ===== HACER APUESTA ===== -->
@@ -749,10 +792,18 @@
         </div>
         <div>
           <label>Combate</label>
-          <select id="betFight" onchange="refreshFighterOptions()"></select>
+          <select id="betFight" onchange="refreshBetOptions()"></select>
         </div>
         <div>
-          <label>Peleador elegido</label>
+          <label>Tipo de apuesta</label>
+          <select id="betType" onchange="refreshBetOptions()">
+            <option value="winner">🥊 Ganador</option>
+            <option value="method">⚡ Método de victoria</option>
+            <option value="round">🔢 Número de asalto</option>
+          </select>
+        </div>
+        <div id="betPickWrap">
+          <label>Elige</label>
           <select id="betFighter"></select>
         </div>
         <div>
@@ -761,7 +812,7 @@
         </div>
       </div>
       <button class="btn-primary" onclick="placeBet()">Apostar</button>
-      <p class="hint"><b>Cuotas inteligentes</b>: mezclan el dinero apostado en cada lado y el récord V-D de los luchadores. Con poco dinero manda el récord; cuanto más se apuesta, más pesa el mercado. Cobras tu apuesta × cuota.</p>
+      <p class="hint"><b>Cuotas inteligentes</b>: mezclan el dinero apostado y el récord V-D. Para apuestas de método/asalto, la cuota es fija según las opciones disponibles. Cobras tu apuesta × cuota.</p>
     </div>
   </div>
 
@@ -1524,7 +1575,7 @@ function addFight(){
   if(!red||!blue){ toast('Selecciona los dos peleadores'); return; }
   if(red.trim().toLowerCase()===blue.trim().toLowerCase()){ toast('Elige dos peleadores distintos'); return; }
   const card=document.getElementById('fightCard').value || 'main';
-  const nf={id:nextFightId++, name, red, blue, card, status:'open', winner:null, bets:[]};
+  const nf={id:nextFightId++, name, red, blue, card, status:'open', winner:null, bets:[], method:null, round:null};
   fights.push(nf);
   document.getElementById('fightName').value='';
 
@@ -1923,7 +1974,8 @@ function refreshFighterOptions(){
 function placeBet(){
   const bid=+document.getElementById('betBettor').value;
   const fid=+document.getElementById('betFight').value;
-  const side=document.getElementById('betFighter').value;
+  const betType=(document.getElementById('betType')||{}).value||'winner';
+  const pick=document.getElementById('betFighter').value;
   const amount=Math.floor(+document.getElementById('betAmount').value);
   const bt=getBettor(bid), f=getFight(fid);
   if(!bt){ toast('Selecciona un apostador'); return; }
@@ -1932,11 +1984,30 @@ function placeBet(){
   if(f.status!=='open'){ toast('El combate está cerrado'); return; }
   if(!amount||amount<1){ toast('Cantidad inválida'); return; }
   if(amount>bt.balance){ toast(bt.name+' no tiene saldo suficiente ('+money(bt.balance)+')'); return; }
+
+  let betObj={bettorId:bid, betType, pick, amount};
+  if(betType==='winner'){
+    // pick = 'red' | 'blue'
+    betObj.side=pick;
+  } else if(betType==='method'){
+    const m=BET_METHODS.find(x=>x.value===pick);
+    betObj.fixedOdds=m?m.odds:3.0;
+    betObj.side=null;
+  } else if(betType==='round'){
+    betObj.fixedOdds=5.0;
+    betObj.side=null;
+  }
+
   bt.balance-=amount;
-  f.bets.push({bettorId:bid, side, amount});
+  f.bets.push(betObj);
   document.getElementById('betAmount').value='';
   save(); render();
-  toast(bt.name+' apostó '+money(amount)+' a '+(side==='red'?f.red:f.blue));
+
+  let desc='';
+  if(betType==='winner') desc=(pick==='red'?f.red:f.blue);
+  else if(betType==='method') desc=BET_METHODS.find(x=>x.value===pick)?.label||pick;
+  else desc='Asalto '+pick;
+  toast(bt.name+' apostó '+money(amount)+' → '+desc);
 }
 
 /* ---------- resolver combate ---------- */
@@ -1944,42 +2015,60 @@ function declareWinner(fid, side){
   const f=getFight(fid);
   if(!requireAdmin()) return;
   if(f.status==='closed'){ toast('Ya resuelto'); return; }
+
+  // leer método y asalto del panel de resultado
+  const methodSel=document.getElementById('dw-method-'+fid);
+  const roundSel=document.getElementById('dw-round-'+fid);
+  const method=methodSel?methodSel.value:'ko';
+  const round=roundSel&&roundSel.value?+roundSel.value:null;
+
   const {red,blue,total}=fightPools(f);
   const winPool = side==='red'?red:blue;
   const winnerName = side==='red'?f.red:f.blue;
-  if(!confirm('Ganador: '+winnerName+'. ¿Confirmar y repartir el pozo?')) return;
+  const loserName  = side==='red'?f.blue:f.red;
 
-  // cuota inteligente del ganador (calculada ANTES de cerrar, para no contar este combate)
+  const methodLabel=BET_METHODS.find(m=>m.value===method)?.label||method;
+  const roundTxt=round?` · Asalto ${round}`:'';
+  if(!confirm(`Ganador: ${winnerName}\nMétodo: ${methodLabel}${roundTxt}\n¿Confirmar y repartir el pozo?`)) return;
+
+  // guardar resultado
+  f.method=method; f.round=round||null;
+
+  // cuota inteligente del ganador (calculada ANTES de cerrar)
   const probs = fightProbabilities(f);
   const oddsWin = side==='red'? probs.oRed : probs.oBlue;
-  f.payoutOdds = winPool>0? oddsWin : 0; // se guarda para mostrar pagos y revertir si se reabre
+  f.payoutOdds = winPool>0? oddsWin : 0;
 
-  if(winPool<=0){
-    // nadie apostó al ganador -> el dinero del pozo se queda "en la casa" (se pierde)
-    if(total>0) toast('Nadie acertó: el pozo de '+money(total)+' se pierde');
-  } else {
-    // cada ganador cobra su apuesta × cuota inteligente; la casa cubre la diferencia con el pozo
-    f.bets.filter(b=>b.side===side).forEach(b=>{
-      const bt=getBettor(b.bettorId);
-      if(bt) bt.balance += b.amount*oddsWin;
-    });
-  }
+  // --- resolver apuestas ---
+  f.bets.forEach(b=>{
+    const bt=getBettor(b.bettorId); if(!bt) return;
+    if(b.betType==='winner'||!b.betType){
+      // apuesta clásica al ganador
+      if((b.side||b.pick)===side && winPool>0){
+        bt.balance+=b.amount*oddsWin;
+      }
+    } else {
+      // apuesta de método o asalto — cuota fija
+      if(betIsWinner(b,{...f, winner:side})){
+        bt.balance+=b.amount*(b.fixedOdds||3.0);
+      }
+    }
+  });
+
   f.status='closed'; f.winner=side;
-  fightClock++; // un combate más resuelto: afecta intereses y cooldowns
+  fightClock++;
 
-  // transferencia automática de cinturones: si el perdedor era campeón, el ganador se lo queda
-  const loserName = side==='red'? f.blue : f.red;
+  // transferencia automática de cinturones
   const loserKey = loserName.trim().toLowerCase();
   let beltMsg='';
-  // crónica posterior al combate
-  const nBets=f.bets.length, nWin=f.bets.filter(b=>b.side===side).length;
+  const nBets=f.bets.length, nWin=f.bets.filter(b=>betIsWinner(b,f)).length;
   const winnerProb = side==='red'? probs.pRed : probs.pBlue;
   const roundName = (f.tourn && tourn)
     ? (tourn.format==='custom5'
         ? (tourn.matches[f.tourn.matchId]||{label:''}).label
         : (tourn.roundNames[f.tourn.ri]||''))
     : '';
-  addNews('🥊', `${winnerName} derrota a ${loserName}${f.name?' en '+f.name:''}.`,
+  addNews('🥊', `${winnerName} derrota a ${loserName}${f.name?' en '+f.name:''}. ${methodLabel}${roundTxt}.`,
     fightReport(winnerName, loserName, f, winnerProb, total, nBets, nWin, oddsWin, !!f.tourn, roundName));
   if(champion && champion.trim().toLowerCase()===loserKey){
     champion=winnerName; beltMsg+=' 🏆 ¡Nuevo campeón!';
@@ -2009,28 +2098,32 @@ function declareWinner(fid, side){
         ])]);
   }
 
-  if(f.tourn) advanceTournament(f, winnerName); // avance del cuadro
+  if(f.tourn) advanceTournament(f, winnerName);
 
   save(); render();
-  toast('¡'+winnerName+' gana! Pozo repartido.'+beltMsg);
+  toast('¡'+winnerName+' gana! ('+methodLabel+')'+beltMsg);
 }
 function reopenFight(fid){
   if(!requireAdmin()) return;
   const f=getFight(fid);
   if(!confirm('Reabrir combate: se revertirá el reparto y volverán los saldos antes del resultado. ¿Continuar?')) return;
-  // revertir: deshacer pagos del ganador con la MISMA cuota usada al cerrar
   const {red,blue,total}=fightPools(f);
   const winPool = f.winner==='red'?red:blue;
   const payOdds = (typeof f.payoutOdds==='number')? f.payoutOdds : (winPool>0? total/winPool:0);
-  if(winPool>0){
-    f.bets.filter(b=>b.side===f.winner).forEach(b=>{
-      const bt=getBettor(b.bettorId);
-      if(bt) bt.balance-=b.amount*payOdds;
-    });
-  }
+
+  f.bets.forEach(b=>{
+    const bt=getBettor(b.bettorId); if(!bt) return;
+    if(b.betType==='winner'||!b.betType){
+      if((b.side||b.pick)===f.winner && winPool>0) bt.balance-=b.amount*payOdds;
+    } else {
+      if(betIsWinner(b,f)) bt.balance-=b.amount*(b.fixedOdds||3.0);
+    }
+  });
+
   delete f.payoutOdds;
+  f.method=null; f.round=null;
   f.status='open'; f.winner=null;
-  if(fightClock>0) fightClock--; // deja de contar como combate resuelto
+  if(fightClock>0) fightClock--;
   save(); render();
 }
 
@@ -2048,13 +2141,14 @@ function bettorStats(id){
       if(b.bettorId!==id) return;
       wagered+=b.amount;
       if(f.status==='closed' && f.winner){
-        if(b.side===f.winner){
+        if(b.betType==='winner'||!b.betType){
           const wp=f.winner==='red'?red:blue;
-          const payOdds = (typeof f.payoutOdds==='number')? f.payoutOdds : (wp>0? total/wp:0);
-          net += b.amount*payOdds - b.amount; // beneficio neto de la apuesta ganada
+          const payOdds=(typeof f.payoutOdds==='number')?f.payoutOdds:(wp>0?total/wp:0);
+          if((b.side||b.pick)===f.winner){ net+=b.amount*payOdds-b.amount; }
+          else { lost+=b.amount; net-=b.amount; }
         } else {
-          lost += b.amount;
-          net  -= b.amount;                   // pierde lo apostado
+          if(betIsWinner(b,f)){ net+=b.amount*(b.fixedOdds||3.0)-b.amount; }
+          else { lost+=b.amount; net-=b.amount; }
         }
       }
     });
@@ -2328,22 +2422,42 @@ function renderFight(f){
       </div>`;
   };
 
+  // mostrar resultado del combate si está cerrado
+  let resultBadge='';
+  if(f.status==='closed' && f.winner){
+    const winName = f.winner==='red'?f.red:f.blue;
+    const methodLabel = f.method? BET_METHODS.find(m=>m.value===f.method)?.label||f.method : '';
+    const roundLabel = f.round? `· Asalto ${f.round}` : '';
+    resultBadge=`<div class="fight-result-badge">🏆 ${escapeHtml(winName)}${methodLabel?' · '+methodLabel:''}${roundLabel}</div>`;
+  }
+
   const betsDetail = f.bets.length? f.bets.map(b=>{
     const bt=getBettor(b.bettorId);
     const name=bt? bt.name : '??';
-    const fname = b.side==='red'?f.red:f.blue;
+    // descripción de la apuesta según tipo
+    let betDesc='';
+    if(b.betType==='method'){
+      const ml=BET_METHODS.find(m=>m.value===b.pick)?.label||b.pick;
+      betDesc=`${escapeHtml(b.side==='red'?f.red:f.blue)} · ${ml}`;
+    } else if(b.betType==='round'){
+      betDesc=`Asalto ${b.pick}`;
+    } else {
+      betDesc=escapeHtml(b.side==='red'?f.red:f.blue);
+    }
     let payTxt='';
     if(f.status==='open'){
-      const odds = b.side==='red'?oRed:oBlue;
+      const odds = b.betType==='winner'?(b.side==='red'?oRed:oBlue):b.fixedOdds||3.0;
       payTxt = `posible: <span class="payout">${money(b.amount*odds)}</span>`;
     } else {
-      if(b.side===f.winner){
-        const wp=f.winner==='red'?red:blue;
-        const payOdds = (typeof f.payoutOdds==='number')? f.payoutOdds : (wp>0? total/wp:0);
+      const won = betIsWinner(b, f);
+      if(won){
+        const payOdds = b.betType==='winner'
+          ? ((typeof f.payoutOdds==='number')? f.payoutOdds : (b.side===f.winner?(f.winner==='red'?red:blue)>0?total/(f.winner==='red'?red:blue):1:0))
+          : (b.fixedOdds||3.0);
         payTxt=`ganó <span class="payout">${money(b.amount*payOdds)}</span>`;
       } else payTxt=`<span style="color:var(--red)">perdió</span>`;
     }
-    return `<div class="bet-line"><span>${escapeHtml(name)} → ${escapeHtml(fname)} · ${money(b.amount)}</span><span>${payTxt}</span></div>`;
+    return `<div class="bet-line"><span>${escapeHtml(name)} → ${betDesc} · ${money(b.amount)}</span><span>${payTxt}</span></div>`;
   }).join('') : '<div class="bet-line"><span>Sin apuestas aún</span><span></span></div>';
 
   const fotnBtn=`<button class="btn-mini ${fotn===f.id?'fotn-on':''}" onclick="toggleFotn(${f.id})">⭐ Combate de la Noche</button>`;
@@ -2351,10 +2465,26 @@ function renderFight(f){
   if(isAdmin()){
     if(f.status==='open'){
       controls=`<div class="winrow">
-          <button class="btn-win" onclick="declareWinner(${f.id},'red')">🏆 Gana ${escapeHtml(f.red)}</button>
-          <button class="btn-win" onclick="declareWinner(${f.id},'blue')">🏆 Gana ${escapeHtml(f.blue)}</button>
-          ${fotnBtn}
-          <button class="btn-del" style="width:auto" onclick="deleteFight(${f.id})">Borrar</button>
+          <div class="declare-winner-panel">
+            <div class="dw-title">Declarar resultado</div>
+            <div class="dw-row">
+              <select id="dw-method-${f.id}" class="dw-select">
+                ${BET_METHODS.map(m=>`<option value="${m.value}">${m.label}</option>`).join('')}
+              </select>
+              <select id="dw-round-${f.id}" class="dw-select">
+                <option value="">— Asalto —</option>
+                ${[1,2,3,4,5].map(r=>`<option value="${r}">Asalto ${r}</option>`).join('')}
+              </select>
+            </div>
+            <div class="dw-row">
+              <button class="btn-win" onclick="declareWinner(${f.id},'red')">🏆 Gana ${escapeHtml(f.red)}</button>
+              <button class="btn-win" onclick="declareWinner(${f.id},'blue')">🏆 Gana ${escapeHtml(f.blue)}</button>
+            </div>
+            <div class="dw-row" style="justify-content:flex-end">
+              ${fotnBtn}
+              <button class="btn-del" style="width:auto" onclick="deleteFight(${f.id})">Borrar</button>
+            </div>
+          </div>
         </div>`;
     } else {
       controls=`<div class="winrow">
@@ -2373,6 +2503,7 @@ function renderFight(f){
           <span class="tag ${f.status}">${f.status==='open'?'Abierto':'Cerrado'}</span>
         </div>
       </div>
+      ${resultBadge}
       <div class="corners">${cornerHtml('red')}${cornerHtml('blue')}</div>
       <div class="barwrap"><div class="br" style="width:${pRed}%"></div><div class="bb" style="width:${pBlue}%"></div></div>
       <div class="stat" style="text-align:center">Pozo total: <b>${money(total)}</b> · ${f.bets.length} apuesta(s)</div>
@@ -2458,6 +2589,114 @@ function _tickCd(){
   if(diff===0){ clearInterval(_cdTimer); _cdTimer=null; const w=document.getElementById('countdownWidget'); if(w) w.style.display='none'; toast('🔔 ¡Es la hora del evento!'); }
 }
 
+
+/* ===== TIPOS DE APUESTA ===== */
+const BET_METHODS = [
+  {value:'ko',    label:'KO / TKO',       odds:2.5},
+  {value:'sub',   label:'Sumisión',        odds:3.0},
+  {value:'dec',   label:'Decisión',        odds:1.8},
+  {value:'draw',  label:'Empate',          odds:8.0},
+  {value:'nc',    label:'Sin Resultado',   odds:12.0},
+];
+const BET_ROUNDS = [1,2,3,4,5];
+
+// ¿ganó una apuesta dado el resultado del combate?
+function betIsWinner(b, f){
+  if(!f.winner && f.method!=='draw' && f.method!=='nc') return false;
+  if(b.betType==='winner'){
+    return b.side===f.winner;
+  }
+  if(b.betType==='method'){
+    if(b.pick==='draw') return f.method==='draw';
+    if(b.pick==='nc')   return f.method==='nc';
+    return b.pick===f.method;
+  }
+  if(b.betType==='round'){
+    return String(b.pick)===String(f.round) && (f.method==='ko'||f.method==='sub');
+  }
+  return false;
+}
+
+/* ===== GENERADOR DE LIGA ===== */
+function generateLeague(){
+  if(!requireAdmin()) return;
+  if(fighters.length<2){ toast('Registra al menos 2 peleadores'); return; }
+  const card=document.getElementById('leagueCard').value||'main';
+
+  // combates ya existentes entre estos peleadores (para no repetir)
+  const existingPairs=new Set();
+  fights.forEach(f=>{
+    if(f.status==='open'||f.status==='closed'){
+      const a=f.red.trim().toLowerCase(), b=f.blue.trim().toLowerCase();
+      existingPairs.add(a+'|'+b);
+      existingPairs.add(b+'|'+a);
+    }
+  });
+
+  // generar todos los pares posibles que no existan ya
+  const newPairs=[];
+  for(let i=0;i<fighters.length;i++){
+    for(let j=i+1;j<fighters.length;j++){
+      const a=fighters[i].trim().toLowerCase(), b=fighters[j].trim().toLowerCase();
+      if(a===b) continue;
+      if(existingPairs.has(a+'|'+b)) continue;
+      newPairs.push([fighters[i],fighters[j]]);
+    }
+  }
+
+  if(!newPairs.length){
+    document.getElementById('leagueInfo').textContent='⚠️ Ya existen todos los combates posibles entre los luchadores registrados.';
+    return;
+  }
+
+  // barajar los pares (Fisher-Yates)
+  for(let i=newPairs.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [newPairs[i],newPairs[j]]=[newPairs[j],newPairs[i]];
+  }
+
+  // crear los combates
+  newPairs.forEach(([red,blue])=>{
+    const nf={id:nextFightId++, name:'Liga', red, blue, card, status:'open', winner:null, bets:[], method:null, round:null};
+    fights.push(nf);
+    const pr=fightProbabilities(nf);
+    const champIn=champion&&(champion.trim().toLowerCase()===red.toLowerCase()||champion.trim().toLowerCase()===blue.toLowerCase());
+    const bmfIn=bmf&&(bmf.trim().toLowerCase()===red.toLowerCase()||bmf.trim().toLowerCase()===blue.toLowerCase());
+    addNews('📢',`¡Combate de liga firmado! ${red} vs ${blue}.${champIn?' 🏆 Cinturón en juego.':''}${bmfIn?' 🥊 BMF en juego.':''}`,
+      fightPreview(red,blue,nf,pr,champIn,bmfIn));
+  });
+
+  const infoEl=document.getElementById('leagueInfo');
+  if(infoEl) infoEl.textContent=`✅ ${newPairs.length} combate(s) generado(s).`;
+  save(); render();
+  toast(`Liga generada: ${newPairs.length} combate(s)`);
+}
+
+/* ===== APUESTAS: refreshBetOptions ===== */
+function refreshBetOptions(){
+  const fid=+document.getElementById('betFight').value;
+  const type=(document.getElementById('betType')||{}).value||'winner';
+  const f=getFight(fid);
+  const sel=document.getElementById('betFighter');
+  sel.innerHTML='';
+  if(!f) return;
+
+  if(type==='winner'){
+    sel.innerHTML=`<option value="red">🔴 ${escapeHtml(f.red)}</option><option value="blue">🔵 ${escapeHtml(f.blue)}</option>`;
+    document.getElementById('betPickWrap').querySelector('label').textContent='Peleador';
+  } else if(type==='method'){
+    sel.innerHTML=BET_METHODS.map(m=>`<option value="${m.value}">${m.label} (${m.odds}x)</option>`).join('');
+    document.getElementById('betPickWrap').querySelector('label').textContent='Método de victoria';
+  } else if(type==='round'){
+    sel.innerHTML=BET_ROUNDS.map(r=>`<option value="${r}">Asalto ${r} (5.0x)</option>`).join('');
+    document.getElementById('betPickWrap').querySelector('label').textContent='Número de asalto';
+  }
+}
+// alias para retrocompatibilidad
+function refreshFighterOptions(){ refreshBetOptions(); }
+
+/* ===== CINTURÓN: auto-transferencia al declarar ganador ===== */
+/* (la lógica de cinturón ya estaba en declareWinner — no se toca) */
 
 /* ---------- init ---------- */
 // comprueba si localStorage funciona en este contexto
