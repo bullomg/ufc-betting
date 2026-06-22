@@ -365,6 +365,8 @@
   .rank-table tr:last-child td{border-bottom:none}
   .pos{font-family:var(--display); color:var(--muted); font-size:1.05rem; width:34px; text-align:center}
   .rank-name{font-weight:600; letter-spacing:.3px}
+  .rank-name-link{ cursor:pointer; transition:color .15s; }
+  .rank-name-link:hover{ color:var(--gold2); text-decoration:underline; text-underline-offset:3px; }
   .rec-w{color:#5fe6a3; font-weight:600} .rec-l{color:#ff7070; font-weight:600}
   .rank-pct{font-family:var(--display); font-size:.95rem; color:var(--gold2)}
   .champ td{background:linear-gradient(90deg,rgba(212,175,55,.16),transparent)}
@@ -584,6 +586,110 @@
   .bg::after{content:""; position:absolute; inset:0; background:
       radial-gradient(120% 90% at 50% 50%,transparent 30%,rgba(8,8,10,.55) 78%,rgba(8,8,10,.92) 100%);}
   @media(max-width:820px){ .bg svg{opacity:.4} }
+  /* ===== MODAL FICHA LUCHADOR ===== */
+  .fighter-modal-overlay{
+    position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center;
+    background:rgba(4,4,6,.88); backdrop-filter:blur(8px); padding:16px;
+  }
+  .fighter-modal{
+    position:relative; width:100%; max-width:680px; max-height:90vh; overflow-y:auto;
+    background:linear-gradient(180deg,#18181f,#0f0f14);
+    border:1px solid var(--border2); border-radius:20px;
+    box-shadow:0 40px 80px -20px #000, inset 0 1px 0 rgba(255,255,255,.06);
+    scrollbar-width:thin; scrollbar-color:var(--border2) transparent;
+  }
+  .fighter-edit-modal{ max-width:520px; }
+  .fighter-modal-close{
+    position:sticky; top:12px; left:calc(100% - 44px); float:right; z-index:10;
+    width:32px; height:32px; border-radius:50%; background:var(--panel3); border:1px solid var(--border2);
+    color:var(--muted); font-size:.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    margin:12px 12px 0 0; transition:.15s;
+  }
+  .fighter-modal-close:hover{ background:rgba(255,45,45,.2); color:var(--red2); border-color:var(--red2); }
+
+  /* Header de la ficha */
+  .fp-header{
+    position:relative; overflow:hidden; border-radius:18px 18px 0 0;
+    background:linear-gradient(180deg,#1c1c26,#12121a);
+    padding:28px 24px 22px; display:flex; gap:20px; align-items:flex-end;
+  }
+  .fp-header::before{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(600px 300px at 30% 0,rgba(210,10,17,.22),transparent 70%);
+    pointer-events:none;
+  }
+  .fp-photo-wrap{
+    flex:0 0 110px; width:110px; height:110px; border-radius:14px; overflow:hidden;
+    border:2px solid var(--border2); background:var(--panel3);
+    display:flex; align-items:center; justify-content:center; position:relative; z-index:1;
+  }
+  .fp-photo{ width:100%; height:100%; object-fit:cover; }
+  .fp-photo-placeholder{ font-size:2.8rem; color:var(--muted); }
+  .fp-header-info{ flex:1; min-width:0; position:relative; z-index:1; }
+  .fp-nickname{ font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--gold2); margin-bottom:4px; }
+  .fp-name{ font-family:var(--display); font-size:clamp(1.4rem,4vw,2rem); letter-spacing:1px; text-transform:uppercase; color:#fff; line-height:1.05; margin-bottom:8px; }
+  .fp-badges{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .fp-record{ display:flex; gap:16px; align-items:baseline; }
+  .fp-record-num{ font-family:var(--display); font-size:1.6rem; line-height:1; }
+  .fp-record-num.w{ color:#5fe6a3; } .fp-record-num.l{ color:#ff7070; } .fp-record-num.d{ color:var(--gold2); }
+  .fp-record-lbl{ font-size:.58rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+
+  /* Cuerpo de la ficha */
+  .fp-body{ padding:20px 24px 24px; }
+  .fp-section{ margin-bottom:20px; }
+  .fp-section-title{
+    font-size:.6rem; font-weight:700; text-transform:uppercase; letter-spacing:2px;
+    color:var(--muted); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+  }
+  .fp-section-title::before{ content:""; width:3px; height:12px; background:var(--gold-grad); border-radius:2px; }
+  .fp-stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .fp-stat-box{
+    background:linear-gradient(180deg,#1e1e28,#161620); border:1px solid var(--border);
+    border-radius:10px; padding:10px 12px; text-align:center;
+  }
+  .fp-stat-val{ font-family:var(--display); font-size:1.1rem; color:#fff; letter-spacing:.5px; }
+  .fp-stat-lbl{ font-size:.58rem; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+  .fp-bio{ font-size:.88rem; color:#ccc; line-height:1.7; font-weight:300; }
+
+  /* Historial de combates */
+  .fp-fight-row{
+    display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border);
+    font-size:.82rem;
+  }
+  .fp-fight-row:last-child{ border-bottom:none; }
+  .fp-fight-result{
+    width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:.7rem; font-weight:800; flex:0 0 auto; letter-spacing:.5px;
+  }
+  .fp-fight-result.W{ background:rgba(46,194,122,.2); color:#5fe6a3; border:1px solid rgba(46,194,122,.5); }
+  .fp-fight-result.L{ background:rgba(255,45,45,.15); color:#ff7070; border:1px solid rgba(255,45,45,.4); }
+  .fp-fight-result.D{ background:rgba(212,175,55,.15); color:var(--gold2); border:1px solid rgba(212,175,55,.4); }
+  .fp-fight-info{ flex:1; min-width:0; }
+  .fp-fight-opp{ font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fp-fight-detail{ font-size:.7rem; color:var(--muted); margin-top:2px; }
+  .fp-fight-date{ font-size:.68rem; color:var(--muted); flex:0 0 auto; }
+
+  /* Editor de ficha (admin) */
+  .fe-title{ font-family:var(--display); font-size:1.1rem; text-transform:uppercase; letter-spacing:1px; color:#fff; margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+  .fe-photo-area{ display:flex; align-items:center; gap:14px; margin-bottom:4px; }
+  .fe-photo-preview{ width:70px; height:70px; border-radius:10px; object-fit:cover; border:1px solid var(--border2); background:var(--panel3); display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:var(--muted); flex:0 0 auto; overflow:hidden; }
+  .fe-photo-preview img{ width:100%; height:100%; object-fit:cover; }
+  .fe-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .fe-full{ grid-column:1/-1; }
+  .fe-actions{ display:flex; gap:10px; margin-top:16px; }
+  .fe-actions button{ flex:1; }
+
+  @media(max-width:600px){
+    .fp-header{ flex-direction:column; align-items:flex-start; gap:14px; padding:20px 16px 16px; }
+    .fp-photo-wrap{ width:80px; height:80px; flex:0 0 80px; border-radius:10px; }
+    .fp-name{ font-size:1.4rem; }
+    .fp-stats-grid{ grid-template-columns:repeat(2,1fr); }
+    .fp-body{ padding:16px; }
+    .fe-grid{ grid-template-columns:1fr; }
+    .fe-full{ grid-column:1; }
+    .fighter-modal{ border-radius:14px; }
+  }
 </style>
 </head>
 <body>
@@ -905,6 +1011,22 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- ===== MODAL FICHA LUCHADOR ===== -->
+<div id="fighterModal" class="fighter-modal-overlay" style="display:none" onclick="if(event.target===this)closeFighterModal()">
+  <div class="fighter-modal">
+    <button class="fighter-modal-close" onclick="closeFighterModal()">✕</button>
+    <div id="fighterModalContent"></div>
+  </div>
+</div>
+
+<!-- ===== MODAL EDITOR DE FICHA (admin) ===== -->
+<div id="fighterEditModal" class="fighter-modal-overlay" style="display:none" onclick="if(event.target===this)closeFighterEditModal()">
+  <div class="fighter-modal fighter-edit-modal">
+    <button class="fighter-modal-close" onclick="closeFighterEditModal()">✕</button>
+    <div id="fighterEditContent"></div>
+  </div>
+</div>
+
 <script>
 const START_BALANCE = 1000;
 // ---- Configuración del banco / préstamos ----
@@ -923,6 +1045,7 @@ let fightClock = 0; // contador monótono de combates resueltos (para intereses 
 let champion = null; // nombre del peleador que posee el cinturón UFC (o null = vacante)
 let bmf = null;      // nombre del peleador que posee el cinturón BMF (o null = vacante)
 let fighters = [];   // peleadores registrados en el ranking (nombres)
+let fighterProfiles = {}; // fichas {nombre_lower: {photo, age, nationality, height, weight, reach, stance, style, team, nickname, hometown, debut, bio}}
 let news = [];       // tablón de noticias [{ts, icon, text}]
 let fotn = null;     // id del combate marcado como "Combate de la Noche"
 let tourn = null;    // torneo: estándar {size,rounds,roundNames,champion,done} | custom5 {format:'custom5',size,players,matches,champion,done}
@@ -961,12 +1084,13 @@ const OWNER = 'Bullsito';
 /* ---------- persistencia (localStorage + nube opcional) ---------- */
 let storageOK = true;
 function gatherState(){
-  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,news,fotn,tourn,users,nextEvent};
+  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent};
 }
 function applyState(d){
   if(!d) return;
   bettors=d.bettors||[]; fights=d.fights||[]; nextBettorId=d.nextBettorId||1; nextFightId=d.nextFightId||1;
   fightClock=d.fightClock||0; champion=d.champion||null; bmf=d.bmf||null; fighters=d.fighters||[];
+  fighterProfiles=d.fighterProfiles||{};
   news=d.news||[]; fotn=d.fotn||null; tourn=d.tourn||null; users=d.users||[];
   nextEvent=d.nextEvent||null;
   migrateBettors(); migrateFighters();
@@ -2359,10 +2483,14 @@ function fighterBadges(name){
 function rankRowHtml(p,posCell,extraClass){
   const total=p.w+p.l, pct=total?Math.round(p.w/total*100):0;
   const idx=fighters.findIndex(n=>n.trim().toLowerCase()===p.name.trim().toLowerCase());
+  const hasProfile=!!getProfile(p.name).nationality||!!getProfile(p.name).photo||!!getProfile(p.name).bio;
   return `<tr class="${extraClass||''}">
       <td class="pos">${posCell}</td>
-      <td><span class="rank-name">${escapeHtml(p.name)}</span>${fighterBadges(p.name)}
-          ${isAdmin()?`<button class="x-fighter" title="Quitar del ranking" onclick="removeFighterAt(${idx})">✕</button>`:''}</td>
+      <td>
+        <span class="rank-name rank-name-link" onclick="openFighterModal('${escapeHtml(p.name)}')" title="Ver ficha">${escapeHtml(p.name)}</span>
+        ${fighterBadges(p.name)}
+        ${isAdmin()?`<button class="x-fighter" title="Quitar del ranking" onclick="removeFighterAt(${idx})">✕</button>`:''}
+      </td>
       <td class="c"><span class="rec-w">${p.w}</span>-<span class="rec-l">${p.l}</span></td>
       <td class="c"><span class="rank-pct">${pct}%</span></td>
     </tr>`;
@@ -2590,6 +2718,190 @@ function _tickCd(){
 }
 
 
+/* ===== FICHAS DE LUCHADORES ===== */
+function getProfile(name){
+  return fighterProfiles[name.trim().toLowerCase()]||{};
+}
+function setProfile(name, data){
+  fighterProfiles[name.trim().toLowerCase()]=data;
+}
+
+// historial completo de combates de un luchador
+function fighterHistory(name){
+  const key=name.trim().toLowerCase();
+  return fights
+    .filter(f=>f.status==='closed' && f.winner && (f.red.trim().toLowerCase()===key||f.blue.trim().toLowerCase()===key))
+    .map(f=>{
+      const isRed=f.red.trim().toLowerCase()===key;
+      const won=(isRed&&f.winner==='red')||(!isRed&&f.winner==='blue');
+      const opp=isRed?f.blue:f.red;
+      const methodLabel=f.method? (BET_METHODS.find(m=>m.value===f.method)?.label||f.method) : 'Decisión';
+      const roundTxt=f.round?` · Asalto ${f.round}`:'';
+      return {result:won?'W':'L', opp, method:methodLabel+roundTxt, name:f.name||''};
+    })
+    .reverse(); // más reciente primero
+}
+
+// abrir modal de ficha
+function openFighterModal(name){
+  const p=getProfile(name);
+  const history=fighterHistory(name);
+  let w=0,l=0,d=0;
+  fights.forEach(f=>{
+    if(f.status!=='closed'||!f.winner) return;
+    const k=name.trim().toLowerCase();
+    const wk=(f.winner==='red'?f.red:f.blue).trim().toLowerCase();
+    const lk=(f.winner==='red'?f.blue:f.red).trim().toLowerCase();
+    if(wk===k) w++; else if(lk===k) l++;
+  });
+
+  const photoHtml=p.photo
+    ?`<img class="fp-photo" src="${p.photo}" alt="${escapeHtml(name)}">`
+    :`<span class="fp-photo-placeholder">🥊</span>`;
+
+  const statBox=(val,lbl)=>`<div class="fp-stat-box"><div class="fp-stat-val">${escapeHtml(val||'—')}</div><div class="fp-stat-lbl">${lbl}</div></div>`;
+
+  const historyHtml=history.length
+    ?history.map(h=>`<div class="fp-fight-row">
+        <div class="fp-fight-result ${h.result}">${h.result}</div>
+        <div class="fp-fight-info">
+          <div class="fp-fight-opp">${escapeHtml(h.opp)}</div>
+          <div class="fp-fight-detail">${escapeHtml(h.method)}${h.name?' · '+escapeHtml(h.name):''}</div>
+        </div>
+      </div>`).join('')
+    :'<p class="empty" style="padding:12px 0">Sin combates resueltos aún.</p>';
+
+  const editBtn=isAdmin()?`<button class="btn-mini" style="margin-top:14px;width:100%" onclick="openFighterEditModal('${escapeHtml(name)}')">✏️ Editar ficha</button>`:'';
+
+  document.getElementById('fighterModalContent').innerHTML=`
+    <div class="fp-header">
+      <div class="fp-photo-wrap">${photoHtml}</div>
+      <div class="fp-header-info">
+        ${p.nickname?`<div class="fp-nickname">"${escapeHtml(p.nickname)}"</div>`:''}
+        <div class="fp-name">${escapeHtml(name)}</div>
+        <div class="fp-badges">${fighterBadges(name)}</div>
+        <div class="fp-record">
+          <div><div class="fp-record-num w">${w}</div><div class="fp-record-lbl">Victorias</div></div>
+          <div><div class="fp-record-num l">${l}</div><div class="fp-record-lbl">Derrotas</div></div>
+          <div><div class="fp-record-num d">${d}</div><div class="fp-record-lbl">Empates</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="fp-body">
+      <div class="fp-section">
+        <div class="fp-section-title">Datos físicos</div>
+        <div class="fp-stats-grid">
+          ${statBox(p.age?p.age+' años':'','Edad')}
+          ${statBox(p.nationality,'Nacionalidad')}
+          ${statBox(p.height,'Altura')}
+          ${statBox(p.weight,'Peso')}
+          ${statBox(p.reach,'Envergadura')}
+          ${statBox(p.stance,'Guardia')}
+        </div>
+      </div>
+      <div class="fp-section">
+        <div class="fp-section-title">Información</div>
+        <div class="fp-stats-grid">
+          ${statBox(p.style,'Estilo')}
+          ${statBox(p.team,'Equipo / Gym')}
+          ${statBox(p.hometown,'Ciudad de origen')}
+          ${statBox(p.debut,'Debut pro')}
+          ${statBox(p.weightClass,'División')}
+          ${statBox(p.association,'Asociación')}
+        </div>
+      </div>
+      ${p.bio?`<div class="fp-section"><div class="fp-section-title">Biografía</div><p class="fp-bio">${escapeHtml(p.bio)}</p></div>`:''}
+      <div class="fp-section">
+        <div class="fp-section-title">Historial de combates (${history.length})</div>
+        ${historyHtml}
+      </div>
+      ${editBtn}
+    </div>`;
+
+  document.getElementById('fighterModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeFighterModal(){
+  document.getElementById('fighterModal').style.display='none';
+  document.body.style.overflow='';
+}
+
+// editor de ficha (admin)
+let editPhotoData=null;
+function openFighterEditModal(name){
+  editPhotoData=null;
+  const p=getProfile(name);
+  const field=(id,label,val,type='text',placeholder='')=>
+    `<div><label>${label}</label><input id="fe-${id}" type="${type}" value="${escapeHtml(val||'')}" placeholder="${placeholder}"></div>`;
+
+  document.getElementById('fighterEditContent').innerHTML=`
+    <div class="fe-title">✏️ Editar ficha — ${escapeHtml(name)}</div>
+    <div class="fe-photo-area">
+      <div class="fe-photo-preview" id="fePhotoPreview">
+        ${p.photo?`<img src="${p.photo}" alt="">`:'🥊'}
+      </div>
+      <div>
+        <button class="btn-mini" onclick="document.getElementById('fePhotoInput').click()">📷 Cambiar foto</button>
+        <input type="file" id="fePhotoInput" accept="image/*" hidden onchange="onFighterPhotoFile(this.files[0],'${escapeHtml(name)}'); this.value=''">
+        <p class="hint" style="margin-top:6px">JPG/PNG recomendado</p>
+      </div>
+    </div>
+    <div class="fe-grid">
+      ${field('nickname','Apodo / Nickname',p.nickname,'text','El Estudiante')}
+      ${field('age','Edad',p.age,'number','')}
+      ${field('nationality','Nacionalidad',p.nationality,'text','Español')}
+      ${field('hometown','Ciudad de origen',p.hometown,'text','Madrid')}
+      ${field('height','Altura',p.height,'text','1,80 m')}
+      ${field('weight','Peso',p.weight,'text','77 kg')}
+      ${field('reach','Envergadura',p.reach,'text','183 cm')}
+      ${field('stance','Guardia',p.stance,'text','Orthodox')}
+      ${field('weightClass','División',p.weightClass,'text','Wélter')}
+      ${field('style','Estilo',p.style,'text','Boxeo / Lucha')}
+      ${field('team','Equipo / Gym',p.team,'text','')}
+      ${field('association','Asociación',p.association,'text','')}
+      ${field('debut','Debut profesional',p.debut,'text','2018')}
+      <div class="fe-full"><label>Biografía</label><textarea id="fe-bio" style="width:100%;background:#0c0c11;border:1px solid var(--border2);color:var(--txt);padding:10px 12px;border-radius:9px;font-family:var(--body);font-size:.9rem;resize:vertical;min-height:80px;font-weight:300">${escapeHtml(p.bio||'')}</textarea></div>
+    </div>
+    <div class="fe-actions">
+      <button class="btn-primary" style="margin-top:0" onclick="saveFighterProfile('${escapeHtml(name)}')">💾 Guardar</button>
+      <button class="btn-mini" onclick="closeFighterEditModal()">Cancelar</button>
+    </div>`;
+
+  document.getElementById('fighterEditModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeFighterEditModal(){
+  document.getElementById('fighterEditModal').style.display='none';
+  if(document.getElementById('fighterModal').style.display==='none') document.body.style.overflow='';
+}
+function onFighterPhotoFile(file, name){
+  if(!file) return;
+  compressImage(file, dataUrl=>{
+    editPhotoData=dataUrl;
+    const prev=document.getElementById('fePhotoPreview');
+    if(prev) prev.innerHTML=`<img src="${dataUrl}" alt="">`;
+  });
+}
+function saveFighterProfile(name){
+  if(!requireAdmin()) return;
+  const g=id=>{ const el=document.getElementById('fe-'+id); return el?el.value.trim():''; };
+  const existing=getProfile(name);
+  const data={
+    photo: editPhotoData||existing.photo||null,
+    nickname:g('nickname'), age:g('age'), nationality:g('nationality'), hometown:g('hometown'),
+    height:g('height'), weight:g('weight'), reach:g('reach'), stance:g('stance'),
+    weightClass:g('weightClass'), style:g('style'), team:g('team'), association:g('association'),
+    debut:g('debut'),
+    bio:document.getElementById('fe-bio')?document.getElementById('fe-bio').value.trim():''
+  };
+  setProfile(name, data);
+  save();
+  closeFighterEditModal();
+  toast('Ficha de '+name+' guardada');
+  // reabrir modal de ficha con los datos nuevos
+  openFighterModal(name);
+}
+
 /* ===== TIPOS DE APUESTA ===== */
 const BET_METHODS = [
   {value:'ko',    label:'KO / TKO',       odds:2.5},
@@ -2699,6 +3011,13 @@ function refreshFighterOptions(){ refreshBetOptions(); }
 /* (la lógica de cinturón ya estaba en declareWinner — no se toca) */
 
 /* ---------- init ---------- */
+// cerrar modales con Escape
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('fighterEditModal').style.display!=='none') closeFighterEditModal();
+    else if(document.getElementById('fighterModal').style.display!=='none') closeFighterModal();
+  }
+});
 // comprueba si localStorage funciona en este contexto
 try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
 catch(e){ storageOK=false; }
