@@ -15,6 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
 <style>
   :root{
     --bg:#08080a; --bg2:#101015; --panel:#15151c; --panel2:#1d1d27; --panel3:#26262f;
@@ -440,6 +441,60 @@
   .champ .rank-name{background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent}
   .belt-tag{font-size:.55rem; letter-spacing:1.5px; color:#08080a; background:var(--gold-grad); padding:2px 7px; border-radius:10px; font-weight:700; text-transform:uppercase; margin-left:6px; vertical-align:middle}
   .belt-tag.bmf{background:linear-gradient(180deg,#2c2c2c,#0a0a0a); color:var(--gold2); border:1px solid var(--gold)}
+
+  /* ---- Tier badges (rep level) ---- */
+  .tier-badge{font-size:.5rem; letter-spacing:1.2px; padding:2px 7px; border-radius:10px; font-weight:700; text-transform:uppercase; margin-left:5px; vertical-align:middle; border:1px solid}
+  .tier-rookie{color:#888; border-color:#444; background:rgba(255,255,255,.04)}
+  .tier-contender{color:#4a9eff; border-color:rgba(74,158,255,.4); background:rgba(74,158,255,.08)}
+  .tier-star{color:#c084fc; border-color:rgba(192,132,252,.4); background:rgba(192,132,252,.08)}
+  .tier-legend{color:var(--gold2); border-color:rgba(212,175,55,.5); background:rgba(212,175,55,.12)}
+  .rank-table th.c4{text-align:center}
+  .rep-col{font-size:.75rem; color:var(--muted); text-align:center}
+
+  /* ---- Bettor stats modal ---- */
+  .bstats-modal{position:fixed; inset:0; z-index:600; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.6); backdrop-filter:blur(4px)}
+  .bstats-box{background:linear-gradient(180deg,#18181f,#0f0f16); border:1px solid var(--border2); border-radius:16px; width:min(500px,94vw); max-height:80vh; overflow-y:auto; padding:22px 20px}
+  .bstats-hd{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px}
+  .bstats-name{font-family:var(--display); font-size:1.1rem; text-transform:uppercase; letter-spacing:1.5px; color:var(--gold2)}
+  .bstats-row{display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); font-size:.85rem; gap:8px}
+  .bstats-row:last-child{border-bottom:none}
+  .bstats-fight{flex:1; color:var(--txt)}
+  .bstats-pick{color:var(--muted); font-size:.78rem}
+  .bstats-result{font-weight:600; white-space:nowrap}
+  .bstats-result.win{color:#5fe6a3}
+  .bstats-result.loss{color:#ff7070}
+  .bstats-result.pending{color:var(--muted); font-weight:400}
+  .bstats-summary{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px}
+  .bstats-kpi{background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center}
+  .bstats-kpi-val{font-family:var(--display); font-size:1.1rem}
+  .bstats-kpi-lbl{font-size:.58rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-top:2px}
+
+  /* ---- News categories ---- */
+  .news-cat{font-size:.5rem; text-transform:uppercase; letter-spacing:1.5px; font-weight:700; padding:2px 8px; border-radius:8px; margin-right:6px; vertical-align:middle; border:1px solid}
+  .ncat-resultado{color:#5fe6a3; border-color:rgba(95,230,163,.35); background:rgba(95,230,163,.08)}
+  .ncat-evento{color:#4a9eff; border-color:rgba(74,158,255,.35); background:rgba(74,158,255,.08)}
+  .ncat-fichaje{color:#c084fc; border-color:rgba(192,132,252,.35); background:rgba(192,132,252,.08)}
+  .ncat-torneo{color:var(--gold2); border-color:rgba(212,175,55,.35); background:rgba(212,175,55,.08)}
+  .ncat-organizacion{color:var(--muted); border-color:var(--border2); background:rgba(255,255,255,.04)}
+
+  /* ---- Highlights section ---- */
+  .hl-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:16px}
+  .hl-card{background:linear-gradient(180deg,#16161e,#0e0e13); border:1px solid var(--border2); border-radius:14px; overflow:hidden}
+  .hl-video{width:100%; aspect-ratio:16/9; display:block; object-fit:cover; background:#000}
+  .hl-info{padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px}
+  .hl-title{font-family:var(--display); font-size:.82rem; text-transform:uppercase; letter-spacing:1px; color:var(--txt); flex:1}
+  .hl-empty{color:var(--muted); font-size:.85rem; padding:18px 0}
+  .hl-upload{display:flex; gap:8px; align-items:center; margin-top:10px}
+  .hl-progress{font-size:.75rem; color:var(--muted); margin-top:6px; display:none}
+
+  /* ---- Mobile refinements ---- */
+  @media(max-width:600px){
+    .btn-win,.btn-mini{padding:6px 10px; font-size:.75rem}
+    select,input{font-size:.9rem}
+    .rank-table th, .rank-table td{padding:6px 3px}
+    .bstats-summary{grid-template-columns:1fr 1fr}
+    .hl-grid{grid-template-columns:1fr}
+  }
   .x-fighter{width:auto; margin:0 0 0 6px; padding:0 5px; font-size:.62rem; background:transparent; color:#5a5a68; border:1px solid transparent; vertical-align:middle; line-height:1.4}
   .x-fighter:hover{color:var(--red2); border-color:rgba(255,45,45,.4)}
 
@@ -1252,7 +1307,17 @@
 
     <!-- Compositor de noticias (solo admin) -->
     <div class="news-composer admin-only">
-      <input id="newsText" placeholder="Escribe una noticia para publicar…" maxlength="200">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="newsText" placeholder="Escribe una noticia para publicar…" maxlength="200" style="flex:1">
+        <select id="newsCat" style="width:130px;flex-shrink:0">
+          <option value="">Sin categoría</option>
+          <option value="resultado">Resultado</option>
+          <option value="evento">Evento</option>
+          <option value="fichaje">Fichaje</option>
+          <option value="torneo">Torneo</option>
+          <option value="organizacion">Organización</option>
+        </select>
+      </div>
       <div id="newsDrop" class="news-drop"
            onclick="document.getElementById('newsImgInput').click()"
            ondragover="event.preventDefault(); this.classList.add('drag')"
@@ -1269,6 +1334,27 @@
     </div>
 
     <div id="newsList"></div>
+  </div>
+</div>
+
+<!-- ===== HIGHLIGHTS ===== -->
+<div class="card" style="margin-top:22px">
+  <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+    <div class="card-title" style="margin:0">🎬 Highlights</div>
+    <div class="admin-only" style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="hlTitle" placeholder="Título del clip…" style="width:160px">
+      <button class="btn-mini" onclick="document.getElementById('hlFileInput').click()">Subir vídeo</button>
+      <input type="file" id="hlFileInput" accept="video/mp4,video/*" hidden onchange="uploadHighlight(this.files[0]); this.value=''">
+    </div>
+  </div>
+  <div id="hlProgress" class="hl-progress"></div>
+  <div id="hlList" class="hl-grid"></div>
+</div>
+
+<!-- ===== MODAL HISTORIAL APOSTADOR ===== -->
+<div id="bstatsModal" class="bstats-modal" style="display:none" onclick="if(event.target===this)closeBettorModal()">
+  <div class="bstats-box">
+    <div id="bstatsModalContent"></div>
   </div>
 </div>
 
@@ -1461,6 +1547,10 @@ let sponsorCatalog = [
 
 // Estado de reputación y contratos: { [fighterKey]: { rep, contracts:[sponsorId,...] } }
 let fighterRep = {};
+// Highlights (clips de vídeo)
+let highlights = [];
+// Rep mínima para participar en combates estelares (Main Event)
+const MAIN_EVENT_MIN_REP = 50;
 
 /* ===================== FIREBASE (modo online opcional) =====================
    Pega aquí la config de tu proyecto Firebase (Configuración del proyecto > Tus apps > Web).
@@ -1476,9 +1566,14 @@ const firebaseConfig = {
   measurementId: "G-Z6KMEKTLLX"
 };
 const USE_CLOUD = typeof firebase!=='undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('PEGA')!==0;
-let db=null, fbAuth=null, cloudTimer=null, cloudReady=false;
+let db=null, fbAuth=null, storage=null, cloudTimer=null, cloudReady=false;
 if(USE_CLOUD){
-  try{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); fbAuth=firebase.auth(); }
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db=firebase.firestore();
+    fbAuth=firebase.auth();
+    if(typeof firebase.storage!=='undefined') storage=firebase.storage();
+  }
   catch(e){ console.error('Error iniciando Firebase:', e); }
 }
 function emailFor(u){ return u.trim().toLowerCase()+'@ufc.local'; }
@@ -1489,7 +1584,7 @@ const OWNER = 'Bullsito';
 /* ---------- persistencia (localStorage + nube opcional) ---------- */
 let storageOK = true;
 function gatherState(){
-  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent,rewardConfig,fighterRep,sponsorTiers,sponsorCatalog,repConfig};
+  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent,rewardConfig,fighterRep,sponsorTiers,sponsorCatalog,repConfig,highlights};
 }
 function applyState(d){
   if(!d) return;
@@ -1503,6 +1598,7 @@ function applyState(d){
   if(d.sponsorTiers && d.sponsorTiers.length) sponsorTiers=d.sponsorTiers;
   if(d.sponsorCatalog && d.sponsorCatalog.length) sponsorCatalog=d.sponsorCatalog;
   if(d.repConfig) repConfig={...repConfig,...d.repConfig};
+  if(Array.isArray(d.highlights)) highlights=d.highlights;
   migrateBettors(); migrateFighters();
 }
 function save(){
@@ -1989,9 +2085,13 @@ function publishNews(){
   if(!requireAdmin()) return;
   const inp=document.getElementById('newsText');
   const txt=(inp.value||'').trim();
+  const cat=(document.getElementById('newsCat')||{}).value||'';
   if(!txt && !composerImg){ toast('Escribe un texto o añade una imagen'); return; }
-  addNews('📰', txt||'📸 Publicación de la organización', [], composerImg);
-  inp.value=''; clearComposerImg();
+  const n={id:'n'+Date.now(), ts:Date.now(), icon:'📰', text:txt||'📸 Publicación de la organización', details:[], img:composerImg||null, cat:cat||null};
+  news.unshift(n);
+  inp.value='';
+  const catEl=document.getElementById('newsCat'); if(catEl) catEl.value='';
+  clearComposerImg();
   save(); render();
   toast('Noticia publicada');
 }
@@ -2009,6 +2109,7 @@ function toggleNewsItem(id){
   if(newsOpen.has(id)) newsOpen.delete(id); else newsOpen.add(id);
   renderNews();
 }
+const NEWS_CATS={resultado:{label:'Resultado',cls:'ncat-resultado'},evento:{label:'Evento',cls:'ncat-evento'},fichaje:{label:'Fichaje',cls:'ncat-fichaje'},torneo:{label:'Torneo',cls:'ncat-torneo'},organizacion:{label:'Org.',cls:'ncat-organizacion'}};
 function renderNews(){
   const el=document.getElementById('newsList'); if(!el) return;
   if(!news.length){ el.innerHTML='<p class="empty">Aún no hay noticias. Crea un combate para empezar a generar titulares.</p>'; return; }
@@ -2016,13 +2117,19 @@ function renderNews(){
     const id = n.id || ('t'+n.ts);
     const has = n.details && n.details.length;
     const open = newsOpen.has(id);
+    const catInfo = n.cat && NEWS_CATS[n.cat];
+    const catBadge = catInfo ? `<span class="news-cat ${catInfo.cls}">${catInfo.label}</span>` : '';
+    const editBtn = isAdmin() && n.cat!=null ? `<button class="btn-mini" style="font-size:.65rem;padding:2px 7px;margin-left:auto" onclick="editNewsItem('${id}')">Editar</button>` : '';
     return `<div class="news-item${i===0?' fresh':''}${open?' open':''}">
         <div class="ni-head" ${has?`onclick="toggleNewsItem('${id}')"`:''}>
           <span class="ni-icon">${n.icon||'📰'}</span>
-          <div class="ni-body">
-            ${i===0?'<span class="ni-badge">Última hora</span>':''}
+          <div class="ni-body" style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:2px">
+              ${i===0?'<span class="ni-badge">Última hora</span>':''}
+              ${catBadge}
+            </div>
             <div class="ni-text">${escapeHtml(n.text)}</div>
-            <div class="ni-time">${fmtNewsTime(n.ts)}${has?' · '+(open?'ocultar detalles':'ver más')+'':''}</div>
+            <div class="ni-time" style="display:flex;align-items:center;gap:8px">${fmtNewsTime(n.ts)}${has?' · '+(open?'ocultar detalles':'ver más'):''}${editBtn}</div>
           </div>
           ${has?`<span class="ni-chevron">${open?'▲':'▼'}</span>`:''}
         </div>
@@ -2033,6 +2140,75 @@ function renderNews(){
       </div>`;
   }).join('');
 }
+function editNewsItem(id){
+  if(!requireAdmin()) return;
+  const n=news.find(x=>(x.id||('t'+x.ts))===id);
+  if(!n) return;
+  const txt=prompt('Editar texto de la noticia:', n.text);
+  if(txt===null) return;
+  n.text=txt.trim()||n.text;
+  save(); renderNews();
+}
+
+/* ---------- Highlights ---------- */
+let hlVideoIndex = 0;
+function renderHighlights(){
+  const el=document.getElementById('hlList'); if(!el) return;
+  if(!highlights.length){ el.innerHTML='<p class="hl-empty">Sin highlights todavía. El admin puede subir clips .mp4.</p>'; return; }
+  el.innerHTML = highlights.map((h,i)=>`
+    <div class="hl-card">
+      <video class="hl-video" src="${escapeHtml(h.url)}" muted playsinline preload="metadata"
+        onended="hlNext(${i})"
+        onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0">
+      </video>
+      <div class="hl-info">
+        <span class="hl-title">${escapeHtml(h.title||'Clip '+(i+1))}</span>
+        ${isAdmin()?`<button class="btn-del" onclick="deleteHighlight('${h.id}')" title="Eliminar">✕</button>`:''}
+      </div>
+    </div>`).join('');
+}
+function hlNext(idx){
+  const videos=document.querySelectorAll('#hlList .hl-video');
+  if(!videos.length) return;
+  const next=(idx+1)%videos.length;
+  videos.forEach((v,i)=>{ if(i!==next) v.pause(); });
+  videos[next].currentTime=0;
+  videos[next].play().catch(()=>{});
+}
+function uploadHighlight(file){
+  if(!requireAdmin()) return;
+  if(!file){ toast('Selecciona un archivo de vídeo'); return; }
+  if(file.size>200*1024*1024){ toast('El vídeo no puede superar 200 MB'); return; }
+  const title=(document.getElementById('hlTitle').value||'').trim()||file.name.replace(/\.[^.]+$/,'');
+  if(!USE_CLOUD || !storage){ toast('Firebase Storage no disponible — sube el vídeo a un hosting y usa la URL directa'); return; }
+  const prog=document.getElementById('hlProgress');
+  prog.style.display='block'; prog.textContent='Subiendo vídeo… 0%';
+  const id='hl'+Date.now();
+  const ref=storage.ref('highlights/'+id+'.mp4');
+  const task=ref.put(file);
+  task.on('state_changed',
+    snap=>{ const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100); prog.textContent=`Subiendo vídeo… ${pct}%`; },
+    err=>{ prog.style.display='none'; toast('Error al subir: '+err.message); },
+    async ()=>{
+      const url=await ref.getDownloadURL();
+      highlights.push({id, title, url, uploadedAt:Date.now()});
+      document.getElementById('hlTitle').value='';
+      prog.style.display='none';
+      save(); renderHighlights();
+      toast('Highlight subido');
+    }
+  );
+}
+function deleteHighlight(id){
+  if(!requireAdmin()) return;
+  if(!confirm('¿Eliminar este highlight?')) return;
+  highlights=highlights.filter(h=>h.id!==id);
+  save(); renderHighlights();
+  if(USE_CLOUD && storage){
+    storage.ref('highlights/'+id+'.mp4').delete().catch(()=>{});
+  }
+}
+
 function getBettor(id){ return bettors.find(b=>b.id===id); }
 function getFight(id){ return fights.find(f=>f.id===id); }
 // propiedad de cuenta: un apostador es "tuyo" si su nombre coincide con tu usuario
@@ -2160,9 +2336,17 @@ function fighterStrength(name){
     if(wk===key) w++;
     if(lk===key) l++;
   });
-  return (w+1)/(w+l+2);
+  const base=(w+1)/(w+l+2);
+  // leve bonus de reputación: mayor fama → ligera ventaja en cuotas (máx +8%)
+  const rep=(fighterRep[key]||{}).rep||0;
+  return Math.min(0.97, base + Math.min(0.08, rep/250));
 }
 // cuotas inteligentes: mezcla el dinero apostado con el récord V-D de cada luchador
+function fighterPopularity(name){
+  // returns a small boost [0, 0.06] based on rep — more popular fighter gets slightly better odds
+  const rep=(fighterRep[name.trim().toLowerCase()]||{}).rep||0;
+  return Math.min(0.06, rep/500);
+}
 function fightProbabilities(f){
   const {red,blue,total}=fightPools(f);
   const sRed=fighterStrength(f.red), sBlue=fighterStrength(f.blue);
@@ -2170,6 +2354,9 @@ function fightProbabilities(f){
   const pMoneyRed = total>0? red/total : 0.5;        // probabilidad por dinero (parimutuel)
   const wMoney = total/(total+ODDS_K);               // peso del mercado: crece con el dinero
   let pRed = wMoney*pMoneyRed + (1-wMoney)*pRecRed;
+  // popularidad: el luchador con más rep recibe un pequeño boost en cuotas
+  const popRed=fighterPopularity(f.red), popBlue=fighterPopularity(f.blue);
+  pRed = pRed + (popRed - popBlue) * (1 - wMoney); // solo cuando el mercado tiene poco peso
   pRed = Math.min(0.97, Math.max(0.03, pRed));        // evita cuotas infinitas/extremas
   const pBlue = 1-pRed;
   return {red, blue, total, pRed, pBlue, oRed:1/pRed, oBlue:1/pBlue, wMoney};
@@ -2218,6 +2405,15 @@ function addFight(){
   if(!red||!blue){ toast('Selecciona los dos peleadores'); return; }
   if(red.trim().toLowerCase()===blue.trim().toLowerCase()){ toast('Elige dos peleadores distintos'); return; }
   const card=document.getElementById('fightCard').value || 'main';
+  if(card==='event'){
+    const rRep=(fighterRep[red.trim().toLowerCase()]||{}).rep||0;
+    const bRep=(fighterRep[blue.trim().toLowerCase()]||{}).rep||0;
+    if(rRep<MAIN_EVENT_MIN_REP||bRep<MAIN_EVENT_MIN_REP){
+      const who=rRep<MAIN_EVENT_MIN_REP?red:blue;
+      toast(`${who} necesita al menos ${MAIN_EVENT_MIN_REP} rep para el Main Event (tiene ${Math.min(rRep,bRep)})`);
+      return;
+    }
+  }
   const nf={id:nextFightId++, name, red, blue, card, status:'open', winner:null, bets:[], method:null, round:null};
   fights.push(nf);
   document.getElementById('fightName').value='';
@@ -2810,6 +3006,74 @@ function bettorStats(id){
   });
   return {wagered, lost, net};
 }
+function openBettorModal(name){
+  const b=bettors.find(x=>x.name.trim().toLowerCase()===name.trim().toLowerCase());
+  if(!b){ toast('Apostador no encontrado'); return; }
+  const s=bettorStats(b.id);
+  // build per-fight history
+  const rows=[];
+  fights.forEach(f=>{
+    f.bets.forEach(bet=>{
+      if(bet.bettorId!==b.id) return;
+      let result='pendiente', cls='', payout=0;
+      if(f.status==='closed' && f.winner){
+        const won=betIsWinner(bet,f)||((!bet.betType||bet.betType==='winner')&&(bet.side||bet.pick)===f.winner);
+        if(won){
+          const {red,blue,total}=fightPools(f);
+          const wp=f.winner==='red'?red:blue;
+          const odds=(!bet.betType||bet.betType==='winner')
+            ?(typeof f.payoutOdds==='number'?f.payoutOdds:(wp>0?total/wp:0))
+            :(bet.fixedOdds||3.0);
+          payout=bet.amount*odds;
+          result='ganada'; cls='win';
+        } else { result='perdida'; cls='loss'; payout=0; }
+      }
+      const pickLabel=bet.betType==='winner'||!bet.betType
+        ?(bet.side||bet.pick)==='red'?f.red:f.blue
+        :bet.betType==='method'?(bet.pick||'')
+        :bet.betType==='round'?'Asalto '+(bet.pick||'')
+        :bet.pick||'';
+      rows.push({fightName:f.name||`${f.red} vs ${f.blue}`, pick:pickLabel, amount:bet.amount, result, cls, payout});
+    });
+  });
+  rows.reverse();
+  const wins=rows.filter(r=>r.cls==='win').length;
+  const losses=rows.filter(r=>r.cls==='loss').length;
+  const winRate=rows.filter(r=>r.cls).length>0?Math.round(wins/(wins+losses)*100):0;
+  const modal=document.getElementById('bstatsModal');
+  document.getElementById('bstatsModalContent').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div>
+        <div style="font-family:var(--display);font-size:1.15rem;letter-spacing:1px;text-transform:uppercase">${escapeHtml(b.name)}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Saldo actual: <b style="color:var(--gold2)">${money(b.balance)}</b></div>
+      </div>
+      <button class="btn-del" style="font-size:1.1rem" onclick="closeBettorModal()">✕</button>
+    </div>
+    <div class="bstats-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
+      <div class="bstats-kpi"><div style="font-size:1.05rem;font-weight:700;color:var(--txt)">${rows.length}</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px">Apuestas</div></div>
+      <div class="bstats-kpi"><div style="font-size:1.05rem;font-weight:700;color:#5fe6a3">${wins}</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px">Ganadas</div></div>
+      <div class="bstats-kpi"><div style="font-size:1.05rem;font-weight:700;color:#ff7070">${losses}</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px">Perdidas</div></div>
+      <div class="bstats-kpi"><div style="font-size:1.05rem;font-weight:700;color:var(--gold2)">${winRate}%</div><div style="font-size:.65rem;color:var(--muted);margin-top:2px">Acierto</div></div>
+    </div>
+    <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">Historial de apuestas</div>
+    ${rows.length?`<div style="display:flex;flex-direction:column;gap:6px">
+      ${rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.fightName)}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:2px">Pick: <b>${escapeHtml(String(r.pick))}</b></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="bstats-result ${r.cls}" style="font-size:.78rem;font-weight:700">${r.result==='pendiente'?'<span style="color:var(--muted)">pendiente</span>':`${r.cls==='win'?'+'+money(r.payout-r.amount):'-'+money(r.amount)}`}</div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:1px">Stake ${money(r.amount)}</div>
+        </div>
+      </div>`).join('')}
+    </div>`:'<p class="empty">Sin apuestas registradas.</p>'}
+  `;
+  modal.style.display='flex';
+}
+function closeBettorModal(){
+  document.getElementById('bstatsModal').style.display='none';
+}
 function renderBetRanking(){
   const el=document.getElementById('betRankingList'); if(!el) return;
   if(!bettors.length){ el.innerHTML='<p class="empty" style="padding:12px">Sin apostadores todavía.</p>'; return; }
@@ -2817,7 +3081,7 @@ function renderBetRanking(){
     .sort((a,b)=> b.net-a.net || b.wagered-a.wagered || a.name.localeCompare(b.name));
   el.innerHTML=list.map((b,i)=>{
     const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-    return `<div class="brank-row">
+    return `<div class="brank-row" style="cursor:pointer" onclick="openBettorModal('${escapeHtml(b.name).replace(/'/g,"\\'")}')" title="Ver historial completo">
         <span class="pos">${medal}</span>
         <div class="brank-body">
           <div class="brank-name">${escapeHtml(b.name)}</div>
@@ -2832,6 +3096,7 @@ function render(){
   renderBetRanking();
   renderBracket();
   renderNews();
+  renderHighlights();
   renderUsers();
   renderCountdown();
   renderRewardConfig();
@@ -3012,6 +3277,12 @@ function fighterBadges(name){
   let s='';
   if(champion && champion.trim().toLowerCase()===k) s+='<span class="belt-tag">Campeón</span>';
   if(bmf && bmf.trim().toLowerCase()===k) s+='<span class="belt-tag bmf">BMF</span>';
+  const rep=(fighterRep[k]||{}).rep||0;
+  const tier=getTierForRep(rep);
+  if(tier){
+    const cls=tier.minRep>=75?'legend':tier.minRep>=50?'star':tier.minRep>=25?'contender':'rookie';
+    if(cls!=='rookie') s+=`<span class="tier-badge tier-${cls}">${tier.name}</span>`;
+  }
   return s;
 }
 function rankRowHtml(p,posCell,extraClass){
@@ -3927,13 +4198,20 @@ function generateLeague(){
   });
 
   // generar todos los pares posibles que no existan ya
+  const eligible = card==='event'
+    ? fighters.filter(n=>((fighterRep[n.trim().toLowerCase()]||{}).rep||0)>=MAIN_EVENT_MIN_REP)
+    : fighters;
+  if(card==='event' && eligible.length<2){
+    document.getElementById('leagueInfo').textContent=`⚠️ Se necesitan al menos 2 luchadores con ≥${MAIN_EVENT_MIN_REP} rep para generar Main Events.`;
+    return;
+  }
   const newPairs=[];
-  for(let i=0;i<fighters.length;i++){
-    for(let j=i+1;j<fighters.length;j++){
-      const a=fighters[i].trim().toLowerCase(), b=fighters[j].trim().toLowerCase();
+  for(let i=0;i<eligible.length;i++){
+    for(let j=i+1;j<eligible.length;j++){
+      const a=eligible[i].trim().toLowerCase(), b=eligible[j].trim().toLowerCase();
       if(a===b) continue;
       if(existingPairs.has(a+'|'+b)) continue;
-      newPairs.push([fighters[i],fighters[j]]);
+      newPairs.push([eligible[i],eligible[j]]);
     }
   }
 
