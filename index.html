@@ -607,6 +607,56 @@
   .reward-amount{ font-family:var(--display); font-size:.95rem; color:#5fe6a3; flex:0 0 auto; font-weight:400; letter-spacing:.5px; }
   .reward-amount.special{ background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
 
+  /* ===== SISTEMA DE PATROCINADORES Y REPUTACIÓN ===== */
+  .rep-bar-wrap{ margin:10px 0 14px; }
+  .rep-bar-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:.72rem; }
+  .rep-label{ font-weight:600; color:var(--txt); }
+  .rep-value{ font-family:var(--display); font-size:.95rem; color:var(--gold2); }
+  .rep-bar-track{ height:8px; background:#0c0c11; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .rep-bar-fill{ height:100%; background:var(--gold-grad); border-radius:6px; transition:width .4s ease; box-shadow:0 0 10px rgba(212,175,55,.4); }
+  .rep-tier-label{ font-size:.62rem; color:var(--muted); margin-top:4px; text-align:right; }
+  .sponsor-tier-section{ margin-bottom:16px; }
+  .sponsor-tier-header{
+    display:flex; align-items:center; gap:8px; margin-bottom:8px;
+    font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px;
+    padding:5px 10px; border-radius:7px; border:1px solid;
+  }
+  .sponsor-card{
+    display:flex; align-items:center; gap:12px;
+    background:linear-gradient(135deg,#1c1c25,#141419);
+    border:1px solid var(--border); border-radius:11px; padding:12px 14px;
+    margin-bottom:8px; transition:border-color .2s, box-shadow .2s; cursor:pointer;
+  }
+  .sponsor-card:hover{ border-color:var(--gold); box-shadow:0 0 16px -6px rgba(212,175,55,.3); }
+  .sponsor-card.active{ border-color:var(--gold); box-shadow:0 0 20px -6px rgba(212,175,55,.4); background:linear-gradient(135deg,rgba(212,175,55,.12),rgba(212,175,55,.03)); }
+  .sponsor-card.locked{ opacity:.45; cursor:not-allowed; pointer-events:none; }
+  .sponsor-logo{ font-size:1.6rem; flex:0 0 auto; width:40px; text-align:center; }
+  .sponsor-info{ flex:1; min-width:0; }
+  .sponsor-name{ font-weight:700; font-size:.9rem; color:#fff; letter-spacing:.3px; }
+  .sponsor-desc{ font-size:.68rem; color:var(--muted); margin-top:2px; }
+  .sponsor-income{ flex:0 0 auto; text-align:right; }
+  .sponsor-income-val{ font-family:var(--display); font-size:.9rem; color:#5fe6a3; letter-spacing:.5px; }
+  .sponsor-income-lbl{ font-size:.58rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .sponsor-active-badge{ font-size:.55rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; background:var(--gold-grad); color:#08080a; padding:2px 7px; border-radius:8px; margin-left:6px; }
+  .contract-row{
+    display:flex; align-items:center; gap:10px; padding:8px 10px;
+    background:linear-gradient(135deg,#1a1a22,#111118); border:1px solid var(--border);
+    border-left:3px solid var(--gold); border-radius:9px; margin-bottom:7px;
+  }
+  .contract-logo{ font-size:1.2rem; flex:0 0 auto; }
+  .contract-info{ flex:1; min-width:0; }
+  .contract-name{ font-size:.82rem; font-weight:600; color:#fff; }
+  .contract-tier{ font-size:.62rem; color:var(--muted); }
+  .contract-earnings{ font-family:var(--display); font-size:.85rem; color:#5fe6a3; flex:0 0 auto; }
+  .scat-row{ display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); font-size:.8rem; }
+  .scat-row:last-child{ border-bottom:none; }
+  .scat-logo-input{ width:50px; text-align:center; }
+  .scat-name-input{ flex:1; }
+  .scat-tier-select{ width:130px; }
+  @media(max-width:600px){
+    .sponsor-card{ padding:10px 11px; gap:9px; }
+    .sponsor-logo{ font-size:1.3rem; width:32px; }
+  }
 
   .fighter-modal-overlay{
     position:fixed; inset:0; z-index:300; display:flex; align-items:center; justify-content:center;
@@ -858,8 +908,23 @@
        <div id="eventCurrentInfo" class="hint" style="margin-top:10px"></div>
      </div>
 
+     <div class="card" style="margin-top:18px">
+       <h2>🤝 Patrocinadores</h2>
+       <p class="hint" style="margin-top:0;margin-bottom:12px">Firma contratos según tu nivel de reputación. Cobras ingresos por cada combate disputado y un bonus extra al ganar.</p>
+       <div id="sponsorPanel"></div>
+     </div>
+
      <div class="card admin-only" style="margin-top:18px">
-       <h2>💸 Recompensas económicas</h2>
+       <h2>⚙️ Config. Patrocinadores</h2>
+       <p class="hint" style="margin-top:0;margin-bottom:10px">Puntos de reputación por resultado (solo admin).</p>
+       <label>Puntos base por victoria</label>
+       <input id="rep-winBase" type="number" min="0" step="1">
+       <label>Bonus por posición del rival (por puesto)</label>
+       <input id="rep-rankBonus" type="number" min="0" step="1">
+       <label>Puntos por derrota (negativo para penalizar)</label>
+       <input id="rep-loss" type="number" step="1">
+       <button class="btn-primary" style="margin-top:12px" onclick="saveRepConfig()">💾 Guardar</button>
+     </div>
        <p class="hint" style="margin-top:0;margin-bottom:12px">Todas las cantidades se aplican automáticamente al declarar el resultado de cada combate.</p>
 
        <div class="rewards-grid">
@@ -1070,6 +1135,22 @@
   </div>
 </div>
 
+<!-- ===== MODAL PATROCINADORES ===== -->
+<div id="sponsorModal" class="fighter-modal-overlay" style="display:none" onclick="if(event.target===this)closeSponsorModal()">
+  <div class="fighter-modal" style="max-width:560px">
+    <button class="fighter-modal-close" onclick="closeSponsorModal()">✕</button>
+    <div id="sponsorModalContent"></div>
+  </div>
+</div>
+
+<!-- ===== MODAL ADMIN CATÁLOGO PATROCINADORES ===== -->
+<div id="sponsorAdminModal" class="fighter-modal-overlay" style="display:none" onclick="if(event.target===this)closeSponsorAdminModal()">
+  <div class="fighter-modal" style="max-width:620px">
+    <button class="fighter-modal-close" onclick="closeSponsorAdminModal()">✕</button>
+    <div id="sponsorAdminContent"></div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <!-- ===== MODAL FICHA LUCHADOR ===== -->
@@ -1120,14 +1201,55 @@ let tournDraft = null;
 
 // ---- Configuración de recompensas económicas (configurable por admin) ----
 let rewardConfig = {
-  winReward:    500,   // $ por ganar un combate
-  loseReward:   100,   // $ por perder un combate (show money)
-  beltBonus:    2000,  // $ gran premio por ganar el cinturón de campeón
-  bmfBonus:     1000,  // $ por ganar el cinturón BMF
-  streakBonus:  300,   // $ bonus por racha de victorias
-  streakCount:  3,     // victorias consecutivas necesarias para el bonus
-  fotnBonus:    500,   // $ bonus de actuación: Combate de la Noche
-  koBonus:      400,   // $ bonus de actuación: KO de la Noche
+  winReward:    500,
+  loseReward:   100,
+  beltBonus:    2000,
+  bmfBonus:     1000,
+  streakBonus:  300,
+  streakCount:  3,
+  fotnBonus:    500,
+  koBonus:      400,
+  subBonus:     400,
+};
+
+// ---- Sistema de reputación / patrocinadores ----
+// Reputación: puntos ganados al vencer según posición rival en ranking (configurable)
+let repConfig = {
+  repPerWinBase:  10,   // puntos base por victoria
+  repPerRankBonus: 2,   // puntos extra por cada posición del rival por encima de la tuya
+  repPerLoss:     -3,   // puntos perdidos por derrota (puede ser 0)
+};
+
+// Tiers de patrocinadores (configurables por admin)
+let sponsorTiers = [
+  { id:1, name:'Rookie',       minRep:0,  color:'#9a9aa8', income:50,  winBonus:50  },
+  { id:2, name:'Contendiente', minRep:25, color:'#4d9bff', income:150, winBonus:100 },
+  { id:3, name:'Estrella',     minRep:50, color:'#2ec27a', income:300, winBonus:200 },
+  { id:4, name:'Leyenda',      minRep:75, color:'#d4af37', income:600, winBonus:500 },
+];
+
+// Catálogo de patrocinadores por tier
+let sponsorCatalog = [
+  // Tier 1
+  { id:'s1',  tierId:1, name:'Venum',        logo:'🥊', desc:'Equipamiento MMA oficial de la UFC' },
+  { id:'s2',  tierId:1, name:'Hayabusa',     logo:'🐉', desc:'Guantes y ropa de entrenamiento' },
+  { id:'s3',  tierId:1, name:'GymShark',     logo:'🦈', desc:'Ropa deportiva de alto rendimiento' },
+  // Tier 2
+  { id:'s4',  tierId:2, name:'Monster Energy', logo:'🟢', desc:'Bebida energética oficial' },
+  { id:'s5',  tierId:2, name:'Reebok',        logo:'⚡', desc:'Calzado y ropa deportiva' },
+  { id:'s6',  tierId:2, name:'Tapout',        logo:'💀', desc:'Marca icónica de MMA' },
+  // Tier 3
+  { id:'s7',  tierId:3, name:'Nike',          logo:'✔️', desc:'La marca deportiva más grande del mundo' },
+  { id:'s8',  tierId:3, name:'Red Bull',      logo:'🐂', desc:'Te da alas dentro y fuera del octágono' },
+  { id:'s9',  tierId:3, name:'Under Armour',  logo:'🛡️', desc:'Equipamiento de élite para atletas' },
+  // Tier 4
+  { id:'s10', tierId:4, name:'UFC',           logo:'🏟️', desc:'Contrato directo con la organización' },
+  { id:'s11', tierId:4, name:'Modelo',        logo:'🍺', desc:'Cerveza oficial de las veladas UFC' },
+  { id:'s12', tierId:4, name:'Porsche',       logo:'🏎️', desc:'El lujo que te mereces como leyenda' },
+];
+
+// Estado de reputación y contratos: { [fighterKey]: { rep, contracts:[sponsorId,...] } }
+let fighterRep = {};
   subBonus:     400,   // $ bonus de actuación: Sumisión de la Noche
 };
 
@@ -1158,7 +1280,7 @@ const OWNER = 'Bullsito';
 /* ---------- persistencia (localStorage + nube opcional) ---------- */
 let storageOK = true;
 function gatherState(){
-  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent,rewardConfig};
+  return {bettors,fights,nextBettorId,nextFightId,fightClock,champion,bmf,fighters,fighterProfiles,news,fotn,tourn,users,nextEvent,rewardConfig,fighterRep,sponsorTiers,sponsorCatalog,repConfig};
 }
 function applyState(d){
   if(!d) return;
@@ -1168,6 +1290,10 @@ function applyState(d){
   news=d.news||[]; fotn=d.fotn||null; tourn=d.tourn||null; users=d.users||[];
   nextEvent=d.nextEvent||null;
   if(d.rewardConfig) rewardConfig={...rewardConfig,...d.rewardConfig};
+  if(d.fighterRep) fighterRep={...d.fighterRep};
+  if(d.sponsorTiers && d.sponsorTiers.length) sponsorTiers=d.sponsorTiers;
+  if(d.sponsorCatalog && d.sponsorCatalog.length) sponsorCatalog=d.sponsorCatalog;
+  if(d.repConfig) repConfig={...repConfig,...d.repConfig};
   migrateBettors(); migrateFighters();
 }
 function save(){
@@ -2391,6 +2517,8 @@ function render(){
   renderUsers();
   renderCountdown();
   renderRewardConfig();
+  renderSponsorPanel();
+  renderRepConfig();
   // refrescar cartera en el userbar
   if(currentUser){
     const myB = bettors.find(b=>b.name.trim().toLowerCase()===currentUser.username.trim().toLowerCase());
@@ -2900,6 +3028,37 @@ function openFighterModal(name){
       </div>
       ${p.bio?`<div class="fp-section"><div class="fp-section-title">Biografía</div><p class="fp-bio">${escapeHtml(p.bio)}</p></div>`:''}
       <div class="fp-section">
+        <div class="fp-section-title">Reputación & Patrocinadores</div>
+        ${(()=>{
+          const rep=getFighterRep(name);
+          const tier=getTierForRep(rep);
+          const contracts=getFighterContracts(name);
+          const nextT=getNextTier(rep);
+          let rhtml=`<div class="rep-bar-wrap" style="margin-top:0">
+            <div class="rep-bar-header">
+              <span class="rep-label">Tier: <b style="color:${tier.color}">${tier.name}</b></span>
+              <span class="rep-value">${Math.round(rep)}/100</span>
+            </div>
+            <div class="rep-bar-track"><div class="rep-bar-fill" style="width:${rep}%"></div></div>
+            <div class="rep-tier-label">${nextT?`Próximo nivel: ${nextT.name} (${nextT.minRep} rep)`:'⭐ Nivel máximo'}</div>
+          </div>`;
+          if(contracts.length){
+            contracts.forEach(sid=>{
+              const sp=sponsorCatalog.find(s=>s.id===sid); if(!sp) return;
+              const st=sponsorTiers.find(t=>t.id===sp.tierId);
+              rhtml+=`<div class="contract-row" style="margin-bottom:6px">
+                <span class="contract-logo">${sp.logo}</span>
+                <div class="contract-info"><div class="contract-name">${escapeHtml(sp.name)}</div><div class="contract-tier">${st?.name||''}</div></div>
+                <span class="contract-earnings">${money(st?.income||0)}/combate</span>
+              </div>`;
+            });
+          } else {
+            rhtml+='<p class="hint" style="margin:6px 0 0">Sin contratos activos.</p>';
+          }
+          return rhtml;
+        })()}
+      </div>
+      <div class="fp-section">
         <div class="fp-section-title">Historial de combates (${history.length})</div>
         ${historyHtml}
       </div>
@@ -2990,6 +3149,302 @@ function saveFighterProfile(name){
   openFighterModal(name);
 }
 
+/* ===== FASE 5: REPUTACIÓN Y PATROCINADORES ===== */
+
+// --- Helpers de reputación ---
+function getRepData(name){
+  const key=name.trim().toLowerCase();
+  if(!fighterRep[key]) fighterRep[key]={rep:0, contracts:[]};
+  return fighterRep[key];
+}
+function getFighterRep(name){ return getRepData(name).rep||0; }
+function getFighterContracts(name){ return getRepData(name).contracts||[]; }
+
+function getTierForRep(rep){
+  const sorted=[...sponsorTiers].sort((a,b)=>b.minRep-a.minRep);
+  return sorted.find(t=>rep>=t.minRep)||sponsorTiers[0];
+}
+function getTierLabel(rep){
+  const t=getTierForRep(rep);
+  return t?t.name:'Rookie';
+}
+function getNextTier(rep){
+  const sorted=[...sponsorTiers].sort((a,b)=>a.minRep-b.minRep);
+  return sorted.find(t=>t.minRep>rep)||null;
+}
+
+// --- Calcular posición de un luchador en el ranking ---
+function fighterRankPos(name){
+  const r=computeRanking();
+  const idx=r.findIndex(p=>p.name.trim().toLowerCase()===name.trim().toLowerCase());
+  return idx>=0?idx+1:r.length+1; // 1-based, más alto = mejor
+}
+
+// --- Actualizar reputación al cerrar un combate ---
+function updateReputation(winnerName, loserName){
+  const wData=getRepData(winnerName);
+  const lData=getRepData(loserName);
+
+  // posiciones en el ranking ANTES del resultado (ranking ya actualizado en este punto)
+  const wPos=fighterRankPos(winnerName);
+  const lPos=fighterRankPos(loserName);
+  const total=fighters.length||1;
+
+  // bonus por rango del rival: vencer a alguien más arriba da más rep
+  const rankBonus = Math.max(0, wPos-lPos) * repConfig.repPerRankBonus;
+  const repGain = Math.max(0, repConfig.repPerWinBase + rankBonus);
+
+  wData.rep = Math.min(100, (wData.rep||0) + repGain);
+  if(repConfig.repPerLoss!==0){
+    lData.rep = Math.max(0, (lData.rep||0) + repConfig.repPerLoss);
+  }
+
+  // noticia si sube de tier
+  const wTierBefore=getTierForRep(Math.max(0,wData.rep-repGain));
+  const wTierAfter=getTierForRep(wData.rep);
+  if(wTierAfter && wTierBefore && wTierAfter.id>wTierBefore.id){
+    addNews('⭐',`¡${winnerName} sube al tier ${wTierAfter.name}! Nuevos patrocinadores disponibles.`,
+      [`🏆 Reputación: ${Math.round(wData.rep)}/100 · Nivel: ${wTierAfter.name}`,
+       `💼 Ya puede firmar contratos con marcas de tier ${wTierAfter.name}.`]);
+  }
+}
+
+// --- Ingresos de patrocinadores por combate disputado ---
+function applyFighterSponsorIncome(fighterName, won){
+  const contracts=getFighterContracts(fighterName);
+  if(!contracts.length) return;
+  let total=0;
+  const lines=[];
+  contracts.forEach(sid=>{
+    const sp=sponsorCatalog.find(s=>s.id===sid); if(!sp) return;
+    const tier=sponsorTiers.find(t=>t.id===sp.tierId);
+    const income=(tier?.income||0)+(won?tier?.winBonus||0:0);
+    total+=income;
+    lines.push(`${sp.logo} ${sp.name}: ${money(income)}${won?' (incl. bonus victoria)':''}`);
+  });
+  if(total>0){
+    payFighter(fighterName, total, 'Ingresos de patrocinadores', '🤝');
+    if(lines.length) addNews('🤝',`${fighterName} cobra ingresos de patrocinadores: ${money(total)}.`,lines);
+  }
+}
+
+// --- Firmar / cancelar contrato ---
+function signSponsor(fighterName, sponsorId){
+  const sp=sponsorCatalog.find(s=>s.id===sponsorId); if(!sp) return;
+  const tier=sponsorTiers.find(t=>t.id===sp.tierId); if(!tier) return;
+  const rep=getFighterRep(fighterName);
+  if(rep<tier.minRep){ toast(`Necesitas ${tier.minRep} de reputación para este patrocinador`); return; }
+
+  const data=getRepData(fighterName);
+  // ya tiene este patrocinador → cancelar
+  if(data.contracts.includes(sponsorId)){
+    data.contracts=data.contracts.filter(id=>id!==sponsorId);
+    save(); renderSponsorPanel();
+    toast(`Contrato con ${sp.name} cancelado`);
+    return;
+  }
+  // solo 1 patrocinador por tier
+  const sameT=sponsorCatalog.filter(s=>s.tierId===sp.tierId).map(s=>s.id);
+  data.contracts=data.contracts.filter(id=>!sameT.includes(id));
+  data.contracts.push(sponsorId);
+  save(); renderSponsorPanel();
+  addNews('🤝',`${fighterName} firma contrato con ${sp.name}.`,
+    [`${sp.logo} ${sp.name} — ${sp.desc}`,
+     `💰 Ingreso por combate: ${money(tier.income)} + bonus victoria: ${money(tier.winBonus)}`]);
+  toast(`✅ Contrato firmado: ${sp.name}`);
+}
+
+// --- Renderizar panel lateral de patrocinadores ---
+function renderSponsorPanel(){
+  const el=document.getElementById('sponsorPanel'); if(!el) return;
+  if(!currentUser){ el.innerHTML='<p class="empty" style="padding:10px">Inicia sesión para ver tus contratos.</p>'; return; }
+
+  // buscar el luchador vinculado al usuario actual
+  const myFighter=fighters.find(n=>n.trim().toLowerCase()===currentUser.username.trim().toLowerCase());
+  if(!myFighter){
+    el.innerHTML='<p class="hint" style="margin:0">Tu usuario no está registrado como luchador en el ranking.</p>'; return;
+  }
+
+  const rep=getFighterRep(myFighter);
+  const contracts=getFighterContracts(myFighter);
+  const currentTier=getTierForRep(rep);
+  const nextTier=getNextTier(rep);
+  const pct=nextTier?Math.min(100,((rep-currentTier.minRep)/(nextTier.minRep-currentTier.minRep))*100):100;
+
+  // barra de reputación
+  let html=`<div class="rep-bar-wrap">
+    <div class="rep-bar-header">
+      <span class="rep-label">Reputación · <b style="color:${currentTier.color}">${currentTier.name}</b></span>
+      <span class="rep-value">${Math.round(rep)}/100</span>
+    </div>
+    <div class="rep-bar-track"><div class="rep-bar-fill" style="width:${rep}%"></div></div>
+    <div class="rep-tier-label">${nextTier?`Siguiente: ${nextTier.name} (${nextTier.minRep} rep)`:'⭐ Nivel máximo'}</div>
+  </div>`;
+
+  // contratos activos
+  if(contracts.length){
+    html+='<div style="margin-bottom:12px">';
+    contracts.forEach(sid=>{
+      const sp=sponsorCatalog.find(s=>s.id===sid); if(!sp) return;
+      const tier=sponsorTiers.find(t=>t.id===sp.tierId);
+      html+=`<div class="contract-row">
+        <span class="contract-logo">${sp.logo}</span>
+        <div class="contract-info">
+          <div class="contract-name">${escapeHtml(sp.name)}</div>
+          <div class="contract-tier">${tier?.name||''} · +${money(tier?.winBonus||0)} por victoria</div>
+        </div>
+        <span class="contract-earnings">${money(tier?.income||0)}/combate</span>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  html+=`<button class="btn-primary" onclick="openSponsorModal('${escapeHtml(myFighter)}')" style="margin-top:0">🤝 Gestionar contratos</button>`;
+  if(isAdmin()) html+=`<button class="btn-mini" onclick="openSponsorAdminModal()" style="margin-top:8px;width:100%;text-align:center">⚙️ Admin: editar catálogo</button>`;
+
+  el.innerHTML=html;
+}
+
+// --- Modal de selección de patrocinadores ---
+function openSponsorModal(fighterName){
+  const rep=getFighterRep(fighterName);
+  const contracts=getFighterContracts(fighterName);
+
+  const tiersSorted=[...sponsorTiers].sort((a,b)=>a.minRep-b.minRep);
+  let html=`<div style="padding:22px 22px 0">
+    <div class="fp-name" style="font-size:1.3rem;margin-bottom:4px">🤝 Patrocinadores</div>
+    <div class="hint" style="margin:0 0 16px">Reputación actual: <b style="color:var(--gold2)">${Math.round(rep)}/100</b> · Tier: <b>${getTierLabel(rep)}</b><br>Solo 1 patrocinador activo por tier.</div>
+  </div>`;
+
+  tiersSorted.forEach(tier=>{
+    const unlocked=rep>=tier.minRep;
+    const tierSponsors=sponsorCatalog.filter(s=>s.tierId===tier.id);
+    html+=`<div style="padding:0 22px;margin-bottom:14px">
+      <div class="sponsor-tier-header" style="color:${tier.color};border-color:${tier.color}40;background:${tier.color}12">
+        <span>Tier ${tier.id} — ${tier.name}</span>
+        <span style="margin-left:auto">${unlocked?'✅ Desbloqueado':`🔒 ${tier.minRep} rep`}</span>
+      </div>`;
+    tierSponsors.forEach(sp=>{
+      const active=contracts.includes(sp.id);
+      const cls=`sponsor-card${active?' active':''}${!unlocked?' locked':''}`;
+      const onclick=unlocked?`onclick="signSponsor('${escapeHtml(fighterName)}','${sp.id}')"` :'';
+      html+=`<div class="${cls}" ${onclick}>
+        <span class="sponsor-logo">${sp.logo}</span>
+        <div class="sponsor-info">
+          <div class="sponsor-name">${escapeHtml(sp.name)}${active?'<span class="sponsor-active-badge">Activo</span>':''}</div>
+          <div class="sponsor-desc">${escapeHtml(sp.desc)}</div>
+        </div>
+        <div class="sponsor-income">
+          <div class="sponsor-income-val">${money(tier.income)}</div>
+          <div class="sponsor-income-lbl">/combate</div>
+          <div class="sponsor-income-val" style="color:var(--gold2);margin-top:3px">+${money(tier.winBonus)}</div>
+          <div class="sponsor-income-lbl">victoria</div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  html+='<div style="height:16px"></div>';
+
+  document.getElementById('sponsorModalContent').innerHTML=html;
+  document.getElementById('sponsorModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeSponsorModal(){
+  document.getElementById('sponsorModal').style.display='none';
+  document.body.style.overflow='';
+}
+
+// --- Modal admin: editar catálogo ---
+function openSponsorAdminModal(){
+  if(!requireAdmin()) return;
+  renderSponsorAdminModal();
+  document.getElementById('sponsorAdminModal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function closeSponsorAdminModal(){
+  document.getElementById('sponsorAdminModal').style.display='none';
+  document.body.style.overflow='';
+}
+function renderSponsorAdminModal(){
+  const el=document.getElementById('sponsorAdminContent'); if(!el) return;
+  const tierOpts=sponsorTiers.map(t=>`<option value="${t.id}">Tier ${t.id} — ${t.name}</option>`).join('');
+  let rows=sponsorCatalog.map((sp,i)=>`
+    <div class="scat-row">
+      <input class="scat-logo-input" id="scat-logo-${i}" value="${escapeHtml(sp.logo)}" placeholder="🥊">
+      <input class="scat-name-input" id="scat-name-${i}" value="${escapeHtml(sp.name)}" placeholder="Nombre">
+      <select class="scat-tier-select" id="scat-tier-${i}">${sponsorTiers.map(t=>`<option value="${t.id}"${t.id===sp.tierId?' selected':''}>${t.name}</option>`).join('')}</select>
+      <button class="btn-del" onclick="deleteSponsorFromCatalog('${sp.id}')">✕</button>
+    </div>`).join('');
+
+  el.innerHTML=`<div style="padding:20px">
+    <div class="fe-title">⚙️ Catálogo de patrocinadores</div>
+    <div id="scatRows">${rows}</div>
+    <button class="btn-mini" style="margin-top:10px;width:100%" onclick="addSponsorToCatalog()">+ Añadir patrocinador</button>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div class="fe-title" style="font-size:.85rem;margin-bottom:10px">Tiers (requisitos de reputación)</div>
+      ${sponsorTiers.map((t,i)=>`
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <span style="color:${t.color};font-weight:700;font-size:.8rem;flex:0 0 90px">${t.name}</span>
+          <input id="tier-minrep-${i}" type="number" style="flex:1" value="${t.minRep}" placeholder="Rep mínima">
+          <input id="tier-income-${i}" type="number" style="flex:1" value="${t.income}" placeholder="$/combate">
+          <input id="tier-winbonus-${i}" type="number" style="flex:1" value="${t.winBonus}" placeholder="Bonus V">
+        </div>`).join('')}
+    </div>
+    <div class="fe-actions">
+      <button class="btn-primary" style="margin-top:0" onclick="saveSponsorCatalog()">💾 Guardar todo</button>
+      <button class="btn-mini" onclick="closeSponsorAdminModal()">Cancelar</button>
+    </div>
+  </div>`;
+}
+function addSponsorToCatalog(){
+  const newId='s'+(Date.now());
+  sponsorCatalog.push({id:newId, tierId:1, name:'Nuevo patrocinador', logo:'🏷️', desc:''});
+  renderSponsorAdminModal();
+}
+function deleteSponsorFromCatalog(sid){
+  sponsorCatalog=sponsorCatalog.filter(s=>s.id!==sid);
+  // quitar de todos los contratos activos
+  Object.values(fighterRep).forEach(d=>{ if(d.contracts) d.contracts=d.contracts.filter(id=>id!==sid); });
+  renderSponsorAdminModal();
+}
+function saveSponsorCatalog(){
+  if(!requireAdmin()) return;
+  // guardar patrocinadores
+  sponsorCatalog.forEach((sp,i)=>{
+    sp.logo=(document.getElementById('scat-logo-'+i)?.value||sp.logo).trim();
+    sp.name=(document.getElementById('scat-name-'+i)?.value||sp.name).trim();
+    sp.tierId=+(document.getElementById('scat-tier-'+i)?.value||sp.tierId);
+  });
+  // guardar tiers
+  sponsorTiers.forEach((t,i)=>{
+    t.minRep=+document.getElementById(`tier-minrep-${i}`)?.value||t.minRep;
+    t.income=+document.getElementById(`tier-income-${i}`)?.value||t.income;
+    t.winBonus=+document.getElementById(`tier-winbonus-${i}`)?.value||t.winBonus;
+  });
+  save(); closeSponsorAdminModal(); render();
+  toast('Catálogo guardado');
+}
+
+// --- saveRepConfig ---
+function saveRepConfig(){
+  if(!requireAdmin()) return;
+  repConfig.repPerWinBase=+document.getElementById('rep-winBase')?.value||repConfig.repPerWinBase;
+  repConfig.repPerRankBonus=+document.getElementById('rep-rankBonus')?.value||repConfig.repPerRankBonus;
+  repConfig.repPerLoss=+document.getElementById('rep-loss')?.value||repConfig.repPerLoss;
+  save(); render(); toast('Configuración de reputación guardada');
+}
+
+// --- Rellenar panel de config rep ---
+function renderRepConfig(){
+  const fields={
+    'rep-winBase':repConfig.repPerWinBase,
+    'rep-rankBonus':repConfig.repPerRankBonus,
+    'rep-loss':repConfig.repPerLoss,
+  };
+  Object.entries(fields).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
+}
+
 /* ===== FASE 4: SISTEMA ECONÓMICO AVANZADO ===== */
 
 // calcula racha actual de victorias consecutivas de un luchador (antes de añadir el combate actual)
@@ -3065,6 +3520,11 @@ function applyFightRewards(f, winnerSide, loserSide, isNewBelt, isNewBmf){
   if(rewardLines.length){
     addNews('💸','Recompensas económicas del combate repartidas.',rewardLines);
   }
+
+  // --- reputación y patrocinadores ---
+  updateReputation(winnerName, loserName);
+  applyFighterSponsorIncome(winnerName, true);
+  applyFighterSponsorIncome(loserName, false);
 }
 
 // bonus de actuación (se aplica al marcar Combate/KO/Sub de la Noche)
@@ -3217,7 +3677,9 @@ function refreshFighterOptions(){ refreshBetOptions(); }
 // cerrar modales con Escape
 document.addEventListener('keydown', e=>{
   if(e.key==='Escape'){
-    if(document.getElementById('fighterEditModal').style.display!=='none') closeFighterEditModal();
+    if(document.getElementById('sponsorAdminModal').style.display!=='none') closeSponsorAdminModal();
+    else if(document.getElementById('sponsorModal').style.display!=='none') closeSponsorModal();
+    else if(document.getElementById('fighterEditModal').style.display!=='none') closeFighterEditModal();
     else if(document.getElementById('fighterModal').style.display!=='none') closeFighterModal();
   }
 });
